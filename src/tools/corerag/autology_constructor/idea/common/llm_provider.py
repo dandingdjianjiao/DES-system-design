@@ -23,7 +23,13 @@ def get_default_llm():
             openai_api_key_to_use = os.getenv("OPENAI_API_KEY")
             if not openai_api_key_to_use:
                  raise ValueError("OpenAI API Key is not configured in  environment variables.")
+        # Extract openai_api_base if present in config
         llm_params = {k: v for k, v in LLM_CONFIG.items() if k not in ['model', 'temperature']}
+
+        # Rename openai_api_base to base_url for newer ChatOpenAI versions
+        if 'openai_api_base' in llm_params:
+            llm_params['base_url'] = llm_params.pop('openai_api_base')
+
         return ChatOpenAI(
             model_name=model_name,
             temperature=temperature,
