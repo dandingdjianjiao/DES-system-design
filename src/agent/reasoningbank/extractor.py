@@ -311,7 +311,10 @@ class MemoryExtractor:
                     metadata={
                         "target_material": trajectory.metadata.get("target_material"),
                         "extraction_type": "experiment_feedback",
-                        "performance_score": experiment_result.get_performance_score(),
+                        # Store raw solubility instead of performance_score
+                        "solubility": experiment_result.solubility,
+                        "solubility_unit": experiment_result.solubility_unit,
+                        "is_liquid_formed": experiment_result.is_liquid_formed,
                     },
                 )
                 memories.append(memory)
@@ -320,9 +323,15 @@ class MemoryExtractor:
                 logger.warning(f"Failed to create memory item: {e}")
                 continue
 
+        # Log using raw solubility instead of performance_score
+        solubility_str = (
+            f"{experiment_result.solubility} {experiment_result.solubility_unit}"
+            if experiment_result.solubility is not None
+            else "N/A (DES not formed)"
+        )
         logger.info(
             f"Extracted {len(memories)} memories from experiment "
-            f"(performance_score: {experiment_result.get_performance_score():.1f}/10.0)"
+            f"(solubility: {solubility_str})"
         )
 
         return memories
@@ -352,11 +361,15 @@ class MemoryExtractor:
         metadata = trajectory.metadata
         final_result = trajectory.final_result
 
-        # Build experiment results summary
+        # Build experiment results summary (without performance_score)
+        solubility_display = (
+            f"{experiment_result.solubility} {experiment_result.solubility_unit}"
+            if experiment_result.solubility is not None
+            else "N/A (DES not formed)"
+        )
         exp_summary = f"""**Experimental Results:**
 - DES Formation: {"✓ Yes (liquid formed)" if experiment_result.is_liquid_formed else "✗ No (remained solid/semi-solid)"}
-- Solubility: {experiment_result.solubility} {experiment_result.solubility_unit if experiment_result.solubility is not None else "N/A (DES not formed)"}
-- Performance Score: {experiment_result.get_performance_score():.1f}/10.0
+- Solubility: {solubility_display}
 """
 
         # Add optional properties

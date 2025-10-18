@@ -58,8 +58,8 @@ class TaskRequest(BaseModel):
     num_components: Optional[int] = Field(
         default=2,
         ge=2,
-        le=5,
-        description="Number of DES components (2=binary, 3=ternary, 4=quaternary, etc.)",
+        le=10,
+        description="Number of DES components (2=binary, 3=ternary, 4=quaternary, 5+=multi-component)",
         json_schema_extra={"example": 2}
     )
     constraints: Optional[Dict[str, str]] = Field(
@@ -282,9 +282,14 @@ class FeedbackRequest(BaseModel):
 class FeedbackData(BaseModel):
     """Feedback processing result data"""
     recommendation_id: str
-    performance_score: float = Field(..., ge=0.0, le=10.0)
+    # Use raw solubility instead of performance_score
+    solubility: Optional[float] = Field(None, description="Measured solubility")
+    solubility_unit: str = Field(default="g/L", description="Unit of solubility")
+    is_liquid_formed: Optional[bool] = Field(None, description="Whether DES liquid formed")
     memories_extracted: List[str] = Field(..., description="Titles of extracted memories")
     num_memories: int = Field(..., description="Number of memories extracted")
+    # Deprecated: kept for backward compatibility
+    performance_score: Optional[float] = Field(None, ge=0.0, le=10.0, deprecated=True, description="[DEPRECATED] Use solubility instead")
 
 
 class FeedbackResponse(BaseResponse):

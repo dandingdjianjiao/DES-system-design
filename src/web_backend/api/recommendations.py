@@ -36,7 +36,7 @@ router = APIRouter()
 async def list_recommendations(
     status: Optional[str] = Query(
         None,
-        description="Filter by status (PENDING, COMPLETED, CANCELLED)",
+        description="Filter by status (GENERATING, PENDING, COMPLETED, CANCELLED, FAILED)",
         example="PENDING"
     ),
     material: Optional[str] = Query(
@@ -71,11 +71,12 @@ async def list_recommendations(
     """
     try:
         # Validate status if provided
-        if status and status not in ["PENDING", "COMPLETED", "CANCELLED"]:
+        valid_statuses = ["GENERATING", "PENDING", "COMPLETED", "CANCELLED", "FAILED"]
+        if status and status not in valid_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=error_response(
-                    message=f"Invalid status: {status}. Must be PENDING, COMPLETED, or CANCELLED"
+                    message=f"Invalid status: {status}. Must be one of: {', '.join(valid_statuses)}"
                 )
             )
 

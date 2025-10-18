@@ -61,5 +61,41 @@
     "target_material": "cellulose",
     "target_temperature": 25.0,
     "file": "C:\\D\\CursorProj\\DES-system-design\\data\\recommendations\\REC_20251017_165337_cellulose_1760691145359_1.json"
+  },
+  "REC_20251018_105112_贵金属_1760755864220_1": {
+    "task_id": "贵金属_1760755864220_1",
+    "status": "PENDING",
+    "created_at": "2025-10-18T10:51:12.351187",
+    "updated_at": "2025-10-18T10:51:12.351191",
+    "target_material": "贵金属",
+    "target_temperature": 25.0,
+    "file": "C:\\D\\CursorProj\\DES-system-design\\data\\recommendations\\REC_20251018_105112_贵金属_1760755864220_1.json"
+  },
+  "REC_20251018_105202_贵金属_1760755914978_1": {
+    "task_id": "贵金属_1760755914978_1",
+    "status": "PENDING",
+    "created_at": "2025-10-18T10:52:02.541614",
+    "updated_at": "2025-10-18T10:52:02.541617",
+    "target_material": "贵金属",
+    "target_temperature": 25.0,
+    "file": "C:\\D\\CursorProj\\DES-system-design\\data\\recommendations\\REC_20251018_105202_贵金属_1760755914978_1.json"
+  },
+  "REC_20251018_121319_贵金属_1760760727201_1": {
+    "task_id": "贵金属_1760760727201_1",
+    "status": "PENDING",
+    "created_at": "2025-10-18T12:13:19.593873",
+    "updated_at": "2025-10-18T12:13:19.593882",
+    "target_material": "贵金属",
+    "target_temperature": 25.0,
+    "file": "C:\\D\\CursorProj\\DES-system-design\\data\\recommendations\\REC_20251018_121319_贵金属_1760760727201_1.json"
+  },
+  "REC_20251018_173938_贵金属_1760780314162_1": {
+    "task_id": "贵金属_1760780314162_1",
+    "status": "PENDING",
+    "created_at": "2025-10-18T17:39:38.899507",
+    "updated_at": "2025-10-18T17:39:38.899513",
+    "target_material": "贵金属",
+    "target_temperature": 25.0,
+    "file": "C:\\D\\CursorProj\\DES-system-design\\data\\recommendations\\REC_20251018_173938_贵金属_1760780314162_1.json"
   }
 }

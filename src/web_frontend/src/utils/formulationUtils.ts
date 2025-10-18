@@ -2,7 +2,7 @@
  * Utility functions for formulation data formatting
  */
 
-import { FormulationData } from '../types';
+import type { FormulationData } from '../types/formulation';
 
 /**
  * Get human-readable formulation string for display

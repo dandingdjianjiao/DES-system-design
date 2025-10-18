@@ -210,18 +210,18 @@ function TaskSubmissionPage() {
           <Form.Item
             label="组分数量"
             name="num_components"
-            tooltip="DES的组分数量：2=二元(Binary), 3=三元(Ternary), 4=四元(Quaternary)"
+            tooltip="DES的组分数量：2=二元(Binary), 3=三元(Ternary), 4=四元(Quaternary), 5+=多元(Multi-component)"
             rules={[
               { required: true, message: '请输入组分数量' },
-              { type: 'number', min: 2, max: 5, message: '组分数量范围: 2-5' },
+              { type: 'number', min: 2, max: 10, message: '组分数量范围: 2-10' },
             ]}
           >
             <InputNumber
               style={{ width: '100%' }}
               min={2}
-              max={5}
+              max={10}
               step={1}
-              placeholder="输入组分数量 (2-5)"
+              placeholder="输入组分数量 (2-10)"
             />
           </Form.Item>
 

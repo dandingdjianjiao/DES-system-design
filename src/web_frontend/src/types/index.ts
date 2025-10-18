@@ -41,7 +41,7 @@ export interface RecommendationSummary {
   target_temperature: number;
   formulation: FormulationData;
   confidence: number;
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  status: 'GENERATING' | 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
   created_at: string;
   updated_at: string;
   performance_score?: number;
@@ -99,7 +99,7 @@ export interface RecommendationDetail {
   reasoning: string;
   confidence: number;
   supporting_evidence: string[];
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  status: 'GENERATING' | 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
   trajectory: Trajectory;
   experiment_result?: ExperimentResult;
   created_at: string;

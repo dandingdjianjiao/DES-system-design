@@ -99,15 +99,23 @@ class FeedbackService:
             if result["status"] != "success":
                 raise RuntimeError(f"Feedback processing failed: {result.get('message')}")
 
+            # Log using raw solubility instead of performance_score
+            solubility_str = (
+                f"{result.get('solubility')} {result.get('solubility_unit')}"
+                if result.get('solubility') is not None
+                else "N/A"
+            )
             logger.info(
-                f"Feedback processed: performance={result['performance_score']:.1f}/10.0, "
+                f"Feedback processed: solubility={solubility_str}, "
                 f"memories={len(result['memories_extracted'])}"
             )
 
             # Build response data
             feedback_data = FeedbackData(
                 recommendation_id=recommendation_id,
-                performance_score=result["performance_score"],
+                solubility=result.get("solubility"),
+                solubility_unit=result.get("solubility_unit"),
+                is_liquid_formed=result.get("is_liquid_formed"),
                 memories_extracted=result["memories_extracted"],
                 num_memories=len(result["memories_extracted"])
             )

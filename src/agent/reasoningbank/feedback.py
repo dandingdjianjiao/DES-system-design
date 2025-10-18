@@ -442,9 +442,7 @@ class FeedbackProcessor:
 
         # Add experiment data to trajectory metadata
         rec.trajectory.metadata["experiment_result"] = exp_result.to_dict()
-        rec.trajectory.metadata["performance_score"] = (
-            exp_result.get_performance_score()
-        )
+        # Note: performance_score removed - use raw solubility instead
         rec.trajectory.metadata["feedback_processed_at"] = datetime.now().isoformat()
 
         # 3. Extract experiment-based memories
@@ -457,10 +455,10 @@ class FeedbackProcessor:
         for memory in new_memories:
             memory.metadata["source"] = "experiment_validated"
             memory.metadata["recommendation_id"] = rec_id
-            memory.metadata["performance_score"] = exp_result.get_performance_score()
-            # Key experimental parameters
+            # Key experimental parameters (use raw metrics, not performance_score)
             memory.metadata["is_liquid_formed"] = exp_result.is_liquid_formed
             memory.metadata["solubility"] = exp_result.solubility
+            memory.metadata["solubility_unit"] = exp_result.solubility_unit
             memory.metadata["experiment_date"] = exp_result.experiment_date
 
         # 4. Consolidate to ReasoningBank
@@ -481,9 +479,9 @@ class FeedbackProcessor:
 
         return {
             "recommendation_id": rec_id,
-            "performance_score": exp_result.get_performance_score(),
             "is_liquid_formed": exp_result.is_liquid_formed,
             "solubility": exp_result.solubility,
+            "solubility_unit": exp_result.solubility_unit,
             "memories_extracted": [m.title for m in new_memories],
             "num_memories": len(new_memories),
         }
