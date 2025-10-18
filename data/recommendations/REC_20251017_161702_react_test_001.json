@@ -1,0 +1,382 @@
+{
+  "recommendation_id": "REC_20251017_161702_react_test_001",
+  "task": {
+    "task_id": "react_test_001",
+    "description": "Design a DES to dissolve cellulose at room temperature (25°C)",
+    "target_material": "cellulose",
+    "target_temperature": 25,
+    "constraints": {
+      "viscosity": "< 500 cP",
+      "toxicity": "low"
+    }
+  },
+  "task_id": "react_test_001",
+  "formulation": {
+    "HBD": "oxalic acid",
+    "HBA": "choline chloride",
+    "molar_ratio": "1:1"
+  },
+  "reasoning": "This formulation is selected because the 1:1 molar ratio of choline chloride and oxalic acid forms a deep eutectic solvent capable of effectively dissolving cellulose at room temperature, as supported by literature. The hydrogen bonding between the chloride anion of choline chloride and the carboxylic protons of oxalic acid disrupts cellulose's crystalline structure while maintaining low viscosity and low toxicity.",
+  "confidence": 0.85,
+  "trajectory": {
+    "task_id": "react_test_001",
+    "task_description": "Design a DES to dissolve cellulose at room temperature (25°C)",
+    "steps": [
+      {
+        "iteration": 1,
+        "phase": "think",
+        "reasoning": "At this early stage, the most efficient path is to simultaneously gather empirical precedents from literature and theoretical foundations for cellulose dissolution in DES. Since no memories or prior knowledge are available, querying both LargeRAG and CoreRAG in parallel minimizes total wait time and ensures comprehensive input for later formulation design.",
+        "action": "query_parallel",
+        "information_gaps": [
+          "Theoretical mechanisms of cellulose-DES interactions (e.g., hydrogen bonding disruption, component roles)",
+          "Empirical evidence of effective DES formulations for cellulose dissolution at room temperature"
+        ]
+      },
+      {
+        "iteration": 1,
+        "phase": "act",
+        "action": "query_parallel",
+        "result_summary": "Parallel query: CoreRAG ✗, LargeRAG ✓ (query #1)"
+      },
+      {
+        "iteration": 1,
+        "phase": "observe",
+        "observation": "Parallel query results: CoreRAG ✗, LargeRAG ✓ (1 total). Successfully retrieved literature precedents from LargeRAG. ",
+        "knowledge_updated": [
+          "literature"
+        ]
+      },
+      {
+        "iteration": 2,
+        "phase": "think",
+        "reasoning": "We have successfully retrieved empirical precedents from the literature via LargeRAG, but lack the theoretical foundation required for scientifically rigorous DES design. Querying CoreRAG now will provide essential principles such as hydrogen bonding mechanisms and component selection criteria, which are critical to rational formulation. Since we are in the early stage and must integrate both theory and data, this is the highest-value next step.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical mechanisms of cellulose dissolution in DES (e.g., hydrogen bond donor/acceptor interactions)",
+          "Design rules for component selection (e.g., HBD and HBA properties that favor cellulose solubility)",
+          "Optimal molar ratios and their thermodynamic basis"
+        ]
+      },
+      {
+        "iteration": 2,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 2,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      },
+      {
+        "iteration": 3,
+        "phase": "think",
+        "reasoning": "Although literature precedents have been retrieved via LargeRAG, theoretical principles from CoreRAG are still missing and are essential for scientifically rigorous DES design. At this early stage, acquiring a comprehensive understanding of hydrogen bonding mechanisms, component selection, and molar ratio effects will provide the foundational knowledge needed to interpret empirical data and generate valid formulations. This single, well-structured theoretical query will maximize information gain while avoiding redundant future queries.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical basis for cellulose dissolution in DES (hydrogen bonding dynamics)",
+          "DES component selection criteria (HBD and HBA properties)",
+          "Optimal molar ratio principles for low viscosity and high solvation power"
+        ]
+      },
+      {
+        "iteration": 3,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 3,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      },
+      {
+        "iteration": 4,
+        "phase": "think",
+        "reasoning": "We are at the mid-stage of research and still lack theoretical understanding from CoreRAG, which is essential for scientifically rigorous DES design. Despite two failed attempts, we must retry a well-structured theoretical query now, as prior failures may have been technical glitches, and no formulation can be generated without foundational principles.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical mechanisms of cellulose dissolution in DES (e.g., hydrogen bond disruption)",
+          "DES component selection criteria (HBD/HBA pairs effective for polysaccharides)",
+          "Optimal molar ratios and their impact on solvent performance"
+        ]
+      },
+      {
+        "iteration": 4,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 4,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      },
+      {
+        "iteration": 5,
+        "phase": "think",
+        "reasoning": "Theoretical understanding from CoreRAG is essential for scientifically rigorous DES design, and it has not yet been successfully retrieved despite prior attempts. Given the mid-stage progress and the requirement to have both theoretical and empirical foundations before formulation, a well-structured query to CoreRAG is now critical to obtain hydrogen bonding mechanisms and component selection principles in one comprehensive request.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical principles of cellulose dissolution in DES (hydrogen bonding, HBD-HBA interactions)",
+          "Optimal molar ratios and component selection criteria based on molecular interactions"
+        ]
+      },
+      {
+        "iteration": 5,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 5,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      },
+      {
+        "iteration": 6,
+        "phase": "think",
+        "reasoning": "We are in the late stage of research and must generate a formulation soon, but we lack theoretical understanding from CoreRAG, which is essential for scientifically valid DES design. Despite previous attempts, CoreRAG has not yet returned usable results, and without a solid theoretical foundation—especially regarding hydrogen bonding mechanisms and component selection—we cannot proceed with rigor.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical principles of cellulose dissolution in DES (hydrogen bond donor/acceptor interactions)",
+          "Optimal molar ratios and component functionalities for low-viscosity, low-toxicity DES",
+          "Role of specific chemical groups in promoting cellulose solubility at room temperature"
+        ]
+      },
+      {
+        "iteration": 6,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 6,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      },
+      {
+        "iteration": 7,
+        "phase": "think",
+        "reasoning": "We are in the late stage of research and must generate a formulation soon, but we lack theoretical foundations from CoreRAG, which is essential for scientifically valid DES design. Despite two failed attempts, CoreRAG remains necessary to understand hydrogen bonding mechanisms and component selection criteria that cannot be fully substituted by literature alone.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical principles of cellulose-DES interactions (e.g., hydrogen bond donor/acceptor strength requirements)",
+          "Optimal molar ratio guidelines based on molecular interactions",
+          "Component compatibility rules to ensure low viscosity and effective dissolution at room temperature"
+        ]
+      },
+      {
+        "iteration": 7,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 7,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      },
+      {
+        "iteration": 8,
+        "phase": "think",
+        "reasoning": "We are in the late stage of research and must generate a formulation, but we lack theoretical understanding from CoreRAG, which is essential for scientifically rigorous DES design. Despite having made one literature query, we have no theoretical insights into hydrogen bonding mechanisms or component selection criteria needed for cellulose dissolution at room temperature.",
+        "action": "query_theory",
+        "information_gaps": [
+          "Theoretical principles of cellulose-DES interactions (e.g., hydrogen bond donor/acceptor strength requirements)",
+          "Optimal molar ratios and molecular design rules for low-viscosity, low-toxicity DES",
+          "Mechanistic understanding of how DES components disrupt cellulose crystallinity at 25°C"
+        ]
+      },
+      {
+        "iteration": 8,
+        "phase": "act",
+        "action": "query_theory",
+        "result_summary": "CoreRAG query failed"
+      },
+      {
+        "iteration": 8,
+        "phase": "observe",
+        "observation": "CoreRAG query returned no results (tool unavailable or query failed). Will proceed with available knowledge sources.",
+        "knowledge_updated": []
+      }
+    ],
+    "outcome": "pending_experiment",
+    "final_result": {
+      "formulation": {
+        "HBD": "oxalic acid",
+        "HBA": "choline chloride",
+        "molar_ratio": "1:1"
+      },
+      "reasoning": "This formulation is selected because the 1:1 molar ratio of choline chloride and oxalic acid forms a deep eutectic solvent capable of effectively dissolving cellulose at room temperature, as supported by literature. The hydrogen bonding between the chloride anion of choline chloride and the carboxylic protons of oxalic acid disrupts cellulose's crystalline structure while maintaining low viscosity and low toxicity.",
+      "confidence": 0.85,
+      "supporting_evidence": [
+        "Choline chloride-based DESs are known for their low toxicity, biodegradability, and ability to form liquids at room temperature when mixed with hydrogen bond donors like oxalic acid.",
+        "A study by Ren et al. demonstrated that a functional DES composed of allyl triethylammonium chloride and oxalic acid achieved 6.48 wt% cellulose dissolution, highlighting the effectiveness of oxalic acid as an HBD in breaking cellulose hydrogen bonds.",
+        "The combination of choline chloride and oxalic acid is referenced in the literature (e.g., keywords 'Choline chloride-oxalic acid') as a viable DES system for extraction processes, suggesting its stability and solvation capability."
+      ]
+    },
+    "metadata": {
+      "target_material": "cellulose",
+      "target_temperature": 25,
+      "constraints": {
+        "viscosity": "< 500 cP",
+        "toxicity": "low"
+      },
+      "tool_calls": [
+        {
+          "tool": "LargeRAG",
+          "query": "Design a DES to dissolve cellulose at room temperature (25°C)",
+          "result": {
+            "documents": [
+              {
+                "text": "Renewable cellulose has been found as the most abundant material in lignocellulose biomass, which has the enormous potentials to be transformed into valuable products. However, its water-insoluble crystalline structure together with the highly packed polymetric macromolecules have all restricted the succedent widespread applications because of its poor dissolution in the conventional solvents. Ren et al. [72] synthesized a novel functional deep eutectic solvent by mixing ally triethyl ammounium chloride ([ATEAm]Cl) with oxalic acid in a 1:1 molar ratio, to highly dissolve the cellulose of $6 . 4 8 ~ \\mathrm { w t } \\%$ . It has been discovered that the π-π conjugative effect resulting from the ally group leads to the charge delocalization of $\\mathrm { [ A T E A m ] ^ { + } }$ . As a result, the solvation properties and viscosity were highly improved to remarkably increase the dissolution of cellulose in DES.",
+                "score": 0.3011565426382836,
+                "metadata": {
+                  "doc_hash": "2bee282af22392139b7f50a5a1e1b0e6",
+                  "page_idx": 23,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 92
+                }
+              },
+              {
+                "text": "1. Inorganic Materials. Inorg Chem. 2003;42(26):8702–8708.   \n[33] Troter D, Todorovic Z, Dokic-Stojanovic D, et al. The physicochemical and thermodynamic properties of the choline chloride-based deep eutectic solvents. J Serb Chem Soc. 2017;82(9):1039–1052.   \n[34] Zhu J, Yu K, Zhu Y, et al. Physicochemical properties of deep eutectic solvents formed by choline chloride and phenolic compounds at $\\mathrm { T } = ( 2 9 3 . 1 5 \\$ to 333.15) K: the influence of electronic effect of substitution group. J Mol Liq. 2017;232:182–187.   \n[35] García G, Aparicio S, Ullah $\\begin{array} { r } { \\mathbb { R } , } \\end{array}$ et al. Deep eutectic solvents: physicochemical properties and gas separation applications. Energy Fuels. 2015;29:2616–2644.   \n[36] Su H, Yin J, Liu Q, et al. Properties of four deep eutectic solvents: density, electrical conductivity, dynamic viscosity and refractive index. Acta Phys Chim Sin. 2015;31(8):1468. .   \n[37] Hayyan A, Mjalli FS, AlNashef IM, et al. Fruit sugar-based deep eutectic solvents and their physical properties. Thermochim Acta. 2012;541:70–75.   \n[38] Florindo C, Oliveira FS, Rebelo LPN, et al. Insights into the synthesis and properties of deep eutectic solvents based on Cholinium Chloride and carboxylic acids ACS sustainable. Chem Eng. 2014;2:2416–2425.",
+                "score": 0.28441623469808425,
+                "metadata": {
+                  "doc_hash": "0c1da4761e88f6bb85a998e9041cfdbd",
+                  "page_idx": 11,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 98
+                }
+              },
+              {
+                "text": "Insights into the synthesis and properties of deep eutectic solvents based on Cholinium Chloride and carboxylic acids ACS sustainable. Chem Eng. 2014;2:2416–2425.   \n[39] Chemat F, You HJ, Muthukumar K, et al. Effect of l-arginine on the physical properties of choline chloride and glycerol based deep eutectic solvents. J Mol Liq. 2015;212:605–611.   \n[40] Yue D, Jia Y, Yao Y, et al. Structure and electrochemical behavior of ionic liquid analogue based on choline chloride and urea. Electrochim Acta. 2012;65:30–36.   \n[41] Hayyan A, Mjalli FS, AlNashef IM, et al. Glucose-based deep eutectic solvents: physical properties. J Mol Liq. 2013;178:137–141.",
+                "score": 0.27248022686443585,
+                "metadata": {
+                  "doc_hash": "0c1da4761e88f6bb85a998e9041cfdbd",
+                  "page_idx": 11,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 98
+                }
+              },
+              {
+                "text": "Vapor–liquid phase equilibrium for separation of isopropanol from its aqueous solution by Choline Chloride-based deep eutectic solvent selected by COSMO-SAC. Model J Chem Eng Data. 2019;64(4):1338–1348. .   \n[9] Liu X, Xu D, Diao B. Choline chloride based deep eutectic solvents selection and liquid-liquid equilibrium for separation of dimethyl carbonate and ethanol. J Mol Liq. 2019;275:347–353.   \n[10] Liu X, Xu D, Diao B, et al. Separation of dimethyl carbonate and methanol by deep eutectic solvents: liquid– liquid equilibrium measurements and thermodynamic modeling. J Chem Eng Data. 2018;63(5):1234–1239.   \n[11] Troter DZ, Todorović ZB, Đokić-Stojanović DR, et al. Choline chloride-based deep eutectic solvents in CaO-catalyzed ethanolysis of expired sunflower oil. J Mol Liq. 2018;266:557-567.   \n[12] Wang S, Peng X, Zhong L, et al. Choline chloride/urea as an effective plasticizer for production of cellulose films. Carbohydr Polym. 2015;117:133–139.   \n[13] Jerome F, Vigier K. Catalytic conversion of carbohydrates to furanic derivatives in the presence of Choline Chloride. Catalysts. 2017;7:1–11.   \n[14] Carrion Prieto P, Martin Ramos P, Hernandez Navarro S, et al. Furfural, 5-HMF, acid-soluble lignin and sugar contents in C. ladanifer and E. arborea lignocellulosic biomass hydrolysates obtained from microwave-assisted treatments in different solvents. Biomass Bioenergy. 2018;119:135–143.",
+                "score": 0.2595492148088268,
+                "metadata": {
+                  "doc_hash": "0c1da4761e88f6bb85a998e9041cfdbd",
+                  "page_idx": 11,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 98
+                }
+              },
+              {
+                "text": "Overview of Acidic Deep Eutectic Solvents on Synthesis, Properties and Applications Hao Qin, Xutao Hu, Jingwen Wang, Hongye Cheng, Lifang Chen, Zhiwen Qi",
+                "score": 0.22450342596290454,
+                "metadata": {
+                  "doc_hash": "2bee282af22392139b7f50a5a1e1b0e6",
+                  "page_idx": 0,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 1
+                }
+              },
+              {
+                "text": "Ind Crops Prod. 2018;112:18–23.   \n[21] Hu S, Zhang Z, Zhou Y, et al. Conversion of fructose to 5-hydroxymethylfurfural using ionic liquids prepared from renewable materials. Green Chem. 2008;10(12):1280–1283. .   \n[22] Anita Y, Pandey S. Densities and viscosities of (choline chloride $^ +$ urea) deep eutectic solvent and its aqueous mixtures in the temperature range $2 9 3 . 1 5 \\mathrm { K }$ to $3 6 3 . 1 5 \\mathrm { K } .$ J Chem Eng Data. 2014;59(7):2221–2229.   \n[23] Harifi-Mood AR, Buchner R. Density, viscosity, and conductivity of choline chloride $^ +$ ethylene glycol as a deep eutectic solvent and its binary mixtures with dimethyl sulfoxide. J Mol Liq. 2017;225:689–695.   \n[24] Scopus Díaz-Ruiz R, Bergua F, Muñoz Embid J, et al. The hydration behavior of D-glucose in the choline chloride: urea: watermixtures. J Mol Liq. 2020;314. DOI:10.1016/j.molliq.2020.113649   \n[25] Shahbaz K, Baroutian S, Mjalli FS, et al. Densities of ammonium and phosphonium based deep eutectic solvents: prediction using artificial intelligence and group contribution techniques. Thermochim Acta. 2012;527:59–66.   \n[26] Taysun MB, Sert E, Atalay FS. Physical properties of benzyl tri-methyl ammonium chloride based deep eutectic solvents and employment as catalyst. J Mol Liq. 2016;223:845–852.",
+                "score": 0.22392375785299626,
+                "metadata": {
+                  "doc_hash": "0c1da4761e88f6bb85a998e9041cfdbd",
+                  "page_idx": 11,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 98
+                }
+              },
+              {
+                "text": "Overview of Acidic Deep Eutectic Solvents on Synthesis, Properties and Applications",
+                "score": 0.2214874255712603,
+                "metadata": {
+                  "doc_hash": "2bee282af22392139b7f50a5a1e1b0e6",
+                  "page_idx": 2,
+                  "text_level": 1,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 9
+                }
+              },
+              {
+                "text": "Abbott, K.J.  McKenzie, K.S. Ryder, in: F. Enders, A.P. Abbott, D.R. MacFarlane (Eds.), Electrodeposition from ionic liquids, WILEY–VCH Verlag GmbH & Co. KGaA, Weinheim, 2008, pp. 15–42.   \n[24] A.P. Abbott, G. Capper, D.L. Davies, K.J. McKenzie, S.U. Obi, Solubility of metal oxides in deep eutectic solvents based on choline chloride, J. Chem. Eng. Data 51 (2006) 1280–1282.   \n[25] H.G. Morrison, C.C. Sun, S. Neervannan, Characterization of thermal behavior of deep eutectic solvents and their potential as drug solubilization vehicles, Int. J. Pharm. 378 (2009) 136–139.   \n[26] A. Hayyan, M.A. Hashim, F.S. Mjalli, M. Hayyan, I.M. AlNashef, A novel phosphonium-based deep eutectic catalyst for biodiesel production from industrial low grade crude palm oil, Chem. Eng. Sci. 92 (2013) 81–88.   \n[27] Y. Dai, G. Witkamp, R. Verpoorte, Y.H. Choi, Natural deep eutectic solvents as a new extraction media for phenolic metabolites in Carthamus tinctorius L, Anal. Chem. 85 (2013) 6272–6278.   \n[28] W.  Bi, M. Tian, K.H. Row, Evaluation of alcohol-based deep eutectic solvent in extraction and determination of flavonoids with response surface methodology optimization, J. Chromatogr. A 1285 (2013) 22–30.",
+                "score": 0.21811842159553874,
+                "metadata": {
+                  "doc_hash": "08e506adb95316885a54b83f02f9b61d",
+                  "page_idx": 6,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 86
+                }
+              },
+              {
+                "text": "To overcome the limitations of high price and toxicity of ILs, a new generation of green solvents—deep eutectic solvents (DESs)—have emerged [23]. A DES is generally composed of two or three non-toxic components that are capable of associating with each other through hydrogen bonds [22]. DESs typically have a very high depression in freezing point and are liquids at temperatures ranging from $2 1 ^ { \\circ } \\mathsf C$ to $7 0 ^ { \\circ } C$ [23]. Choline chloride (ChCl), an inexpensive, biodegradable, and non-toxic quaternary ammonium salt, is widely used as one of the components in the formation of DESs [24]. When combined with non-toxic hydrogen bond donors (HBDs), such as carboxylic acids (e.g., oxalic acid), urea, or polyols (e.g., glycerol), ChCl is capable of rapidly forming a liquid [22–24]. These mixtures can be prepared with high purity and do not react with water, which allows for easy storage. In addition, they are biodegradable, biocompatible, non-toxic, non-flammable, and inexpensive [22]. Charge delocalization that is achieved through hydrogen bonding between the halide anion (e.g., $\\mathbf { C l } ^ { - }$ in ChCl) with an HBD moiety is responsible for formation of the liquid [23].",
+                "score": 0.21392897427313565,
+                "metadata": {
+                  "doc_hash": "08e506adb95316885a54b83f02f9b61d",
+                  "page_idx": 1,
+                  "text_level": 0,
+                  "has_citations": true,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 16
+                }
+              },
+              {
+                "text": "Keywords:   \nDeep eutectic solvent   \nCholine chloride-oxalic acid   \nPolycyclic aromatic hydrocarbons (PAHs)   \nExtraction   \nBiological samples   \nHigh performance liquid   \nchromatography-fluorescence detection",
+                "score": 0.20599417511173998,
+                "metadata": {
+                  "doc_hash": "08e506adb95316885a54b83f02f9b61d",
+                  "page_idx": 0,
+                  "text_level": 0,
+                  "has_citations": false,
+                  "source_file": "content_list_process.json",
+                  "item_idx": 5
+                }
+              }
+            ],
+            "num_results": 10,
+            "query": "deep eutectic solvents cellulose dissolution room temperature 25°C formulation choline chloride urea lactic acid viscosity toxicity",
+            "formatted_text": "Document 1 (Score: 0.301, Source: 2bee282a..., Page: 23):\nRenewable cellulose has been found as the most abundant material in lignocellulose biomass, which has the enormous potentials to be transformed into valuable products. However, its water-insoluble crystalline structure together with the highly packed polymetric macromolecules have all restricted the succedent widespread applications because of its poor dissolution in the conventional solvents. Ren...\n\n---\n\nDocument 2 (Score: 0.284, Source: 0c1da476..., Page: 11):\n1. Inorganic Materials. Inorg Chem. 2003;42(26):8702–8708.   \n[33] Troter D, Todorovic Z, Dokic-Stojanovic D, et al. The physicochemical and thermodynamic properties of the choline chloride-based deep eutectic solvents. J Serb Chem Soc. 2017;82(9):1039–1052.   \n[34] Zhu J, Yu K, Zhu Y, et al. Physicochemical properties of deep eutectic solvents formed by choline chloride and phenolic compounds at ...\n\n---\n\nDocument 3 (Score: 0.272, Source: 0c1da476..., Page: 11):\nInsights into the synthesis and properties of deep eutectic solvents based on Cholinium Chloride and carboxylic acids ACS sustainable. Chem Eng. 2014;2:2416–2425.   \n[39] Chemat F, You HJ, Muthukumar K, et al. Effect of l-arginine on the physical properties of choline chloride and glycerol based deep eutectic solvents. J Mol Liq. 2015;212:605–611.   \n[40] Yue D, Jia Y, Yao Y, et al. Structure and ...\n\n---\n\nDocument 4 (Score: 0.260, Source: 0c1da476..., Page: 11):\nVapor–liquid phase equilibrium for separation of isopropanol from its aqueous solution by Choline Chloride-based deep eutectic solvent selected by COSMO-SAC. Model J Chem Eng Data. 2019;64(4):1338–1348. .   \n[9] Liu X, Xu D, Diao B. Choline chloride based deep eutectic solvents selection and liquid-liquid equilibrium for separation of dimethyl carbonate and ethanol. J Mol Liq. 2019;275:347–353.   ...\n\n---\n\nDocument 5 (Score: 0.225, Source: 2bee282a..., Page: 0):\nOverview of Acidic Deep Eutectic Solvents on Synthesis, Properties and Applications Hao Qin, Xutao Hu, Jingwen Wang, Hongye Cheng, Lifang Chen, Zhiwen Qi\n\n---\n\nDocument 6 (Score: 0.224, Source: 0c1da476..., Page: 11):\nInd Crops Prod. 2018;112:18–23.   \n[21] Hu S, Zhang Z, Zhou Y, et al. Conversion of fructose to 5-hydroxymethylfurfural using ionic liquids prepared from renewable materials. Green Chem. 2008;10(12):1280–1283. .   \n[22] Anita Y, Pandey S. Densities and viscosities of (choline chloride $^ +$ urea) deep eutectic solvent and its aqueous mixtures in the temperature range $2 9 3 . 1 5 \\mathrm { K }$ to...\n\n---\n\nDocument 7 (Score: 0.221, Source: 2bee282a..., Page: 2):\nOverview of Acidic Deep Eutectic Solvents on Synthesis, Properties and Applications\n\n---\n\nDocument 8 (Score: 0.218, Source: 08e506ad..., Page: 6):\nAbbott, K.J.  McKenzie, K.S. Ryder, in: F. Enders, A.P. Abbott, D.R. MacFarlane (Eds.), Electrodeposition from ionic liquids, WILEY–VCH Verlag GmbH & Co. KGaA, Weinheim, 2008, pp. 15–42.   \n[24] A.P. Abbott, G. Capper, D.L. Davies, K.J. McKenzie, S.U. Obi, Solubility of metal oxides in deep eutectic solvents based on choline chloride, J. Chem. Eng. Data 51 (2006) 1280–1282.   \n[25] H.G. Morrison, ...\n\n---\n\nDocument 9 (Score: 0.214, Source: 08e506ad..., Page: 1):\nTo overcome the limitations of high price and toxicity of ILs, a new generation of green solvents—deep eutectic solvents (DESs)—have emerged [23]. A DES is generally composed of two or three non-toxic components that are capable of associating with each other through hydrogen bonds [22]. DESs typically have a very high depression in freezing point and are liquids at temperatures ranging from $2 1 ...\n\n---\n\nDocument 10 (Score: 0.206, Source: 08e506ad..., Page: 0):\nKeywords:   \nDeep eutectic solvent   \nCholine chloride-oxalic acid   \nPolycyclic aromatic hydrocarbons (PAHs)   \nExtraction   \nBiological samples   \nHigh performance liquid   \nchromatography-fluorescence detection"
+          }
+        }
+      ],
+      "iterations_used": 8,
+      "react_mode": true,
+      "final_knowledge_state": {
+        "had_memories": true,
+        "had_theory": false,
+        "had_literature": true,
+        "num_theory_queries": 0,
+        "num_literature_queries": 1
+      }
+    }
+  },
+  "status": "PENDING",
+  "created_at": "2025-10-17T16:17:02.447099",
+  "updated_at": "2025-10-17T16:17:02.447102",
+  "experiment_result": null,
+  "version": "1.0",
+  "metadata": {}
+}

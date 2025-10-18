@@ -55,6 +55,13 @@ class TaskRequest(BaseModel):
         description="Target temperature in Celsius",
         json_schema_extra={"example": 25.0}
     )
+    num_components: Optional[int] = Field(
+        default=2,
+        ge=2,
+        le=5,
+        description="Number of DES components (2=binary, 3=ternary, 4=quaternary, etc.)",
+        json_schema_extra={"example": 2}
+    )
     constraints: Optional[Dict[str, str]] = Field(
         default_factory=dict,
         description="Additional constraints (key-value pairs)",
@@ -73,11 +80,43 @@ class TaskRequest(BaseModel):
         return v.strip().lower()
 
 
+class ComponentData(BaseModel):
+    """Single component in a DES formulation"""
+    name: str = Field(..., description="Component name")
+    role: str = Field(..., description="Component role (HBD, HBA, modifier, etc.)")
+    function: Optional[str] = Field(None, description="Component function/purpose")
+
+
 class FormulationData(BaseModel):
-    """DES formulation data"""
-    HBD: str = Field(..., description="Hydrogen Bond Donor", json_schema_extra={"example": "Urea"})
-    HBA: str = Field(..., description="Hydrogen Bond Acceptor", json_schema_extra={"example": "Choline chloride"})
-    molar_ratio: str = Field(..., description="Molar ratio (HBD:HBA)", json_schema_extra={"example": "1:2"})
+    """DES formulation data - supports both binary and multi-component formulations"""
+    # Binary formulation fields (backward compatible)
+    HBD: Optional[str] = Field(None, description="Hydrogen Bond Donor (for binary DES)", json_schema_extra={"example": "Urea"})
+    HBA: Optional[str] = Field(None, description="Hydrogen Bond Acceptor (for binary DES)", json_schema_extra={"example": "Choline chloride"})
+
+    # Multi-component formulation fields
+    components: Optional[List[ComponentData]] = Field(None, description="List of components (for multi-component DES)")
+    num_components: Optional[int] = Field(None, description="Number of components")
+
+    # Common fields
+    molar_ratio: str = Field(..., description="Molar ratio", json_schema_extra={"example": "1:2"})
+
+    def is_binary(self) -> bool:
+        """Check if this is a binary formulation"""
+        return self.HBD is not None and self.HBA is not None
+
+    def is_multi_component(self) -> bool:
+        """Check if this is a multi-component formulation"""
+        return self.components is not None and len(self.components) > 2
+
+    def get_display_string(self) -> str:
+        """Get human-readable formulation string"""
+        if self.is_binary():
+            return f"{self.HBD} : {self.HBA} ({self.molar_ratio})"
+        elif self.is_multi_component():
+            component_names = " + ".join([c.name for c in self.components])
+            return f"{component_names} ({self.molar_ratio})"
+        else:
+            return f"Unknown formulation ({self.molar_ratio})"
 
 
 class TaskData(BaseModel):
@@ -295,6 +334,12 @@ class StatisticsResponse(BaseResponse):
     """Response model for statistics"""
     status: str = Field(default="success")
     data: StatisticsData
+
+
+class PerformanceTrendResponse(BaseResponse):
+    """Response model for performance trend"""
+    status: str = Field(default="success")
+    data: List[PerformanceTrendPoint]
 
 
 # ===== Admin Models =====

@@ -23,7 +23,7 @@ class WebConfig(BaseSettings):
     api_reload: bool = True
 
     # CORS Configuration
-    cors_origins: str = "http://localhost:3000,http://localhost:3001"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:5173"
 
     # Agent Configuration Paths
     agent_config_path: str = "../agent/config/reasoningbank_config.yaml"

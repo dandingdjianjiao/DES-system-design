@@ -8,7 +8,7 @@ import logging
 from typing import Dict, Any
 from datetime import datetime
 
-from models.schemas import TaskRequest, TaskData, FormulationData
+from models.schemas import TaskRequest, TaskData, FormulationData, ComponentData
 from utils.agent_loader import get_agent
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ class TaskService:
                 "description": task_request.description,
                 "target_material": task_request.target_material,
                 "target_temperature": task_request.target_temperature,
+                "num_components": task_request.num_components or 2,
                 "constraints": task_request.constraints or {}
             }
 
@@ -78,11 +79,30 @@ class TaskService:
         """
         # Extract formulation
         formulation_dict = result.get("formulation", {})
-        formulation = FormulationData(
-            HBD=formulation_dict.get("HBD", "Unknown"),
-            HBA=formulation_dict.get("HBA", "Unknown"),
-            molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
-        )
+
+        # Check if multi-component or binary formulation
+        if "components" in formulation_dict and formulation_dict["components"]:
+            # Multi-component formulation
+            components = [
+                ComponentData(
+                    name=comp.get("name", "Unknown"),
+                    role=comp.get("role", "Unknown"),
+                    function=comp.get("function")
+                )
+                for comp in formulation_dict["components"]
+            ]
+            formulation = FormulationData(
+                components=components,
+                num_components=formulation_dict.get("num_components", len(components)),
+                molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
+            )
+        else:
+            # Binary formulation (backward compatible)
+            formulation = FormulationData(
+                HBD=formulation_dict.get("HBD", "Unknown"),
+                HBA=formulation_dict.get("HBA", "Unknown"),
+                molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
+            )
 
         # Build TaskData
         task_data = TaskData(

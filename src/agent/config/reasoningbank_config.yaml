@@ -78,8 +78,20 @@ logging:
   log_file: "logs/reasoningbank.log"
   console: true
 
-# Agent Behavior
+# Agent Behavior (ReAct Loop Configuration)
 agent:
-  max_steps: 10  # Maximum steps per task
+  # ReAct Loop Parameters
+  max_iterations: 8  # Maximum ReAct iterations (Think-Act-Observe cycles)
   enable_memory_injection: true  # Inject retrieved memories into prompt
   explain_memory_usage: true  # Agent should explain why it uses each memory
+
+  # Stopping Conditions
+  auto_finish_threshold: 0.75  # Auto-finish if formulation confidence >= this value
+  allow_early_stopping: true  # Allow LLM to decide "finish" before max_iterations
+
+  # Formulation Design
+  default_num_components: 2  # Default DES type: 2=binary, 3=ternary, 4=quaternary, etc.
+  allow_multi_component: true  # Allow agent to suggest multi-component DES
+
+  # Deprecated (use max_iterations instead)
+  # max_steps: 10

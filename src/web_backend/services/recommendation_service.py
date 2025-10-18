@@ -14,6 +14,7 @@ from models.schemas import (
     RecommendationListData,
     RecommendationDetail,
     FormulationData,
+    ComponentData,
     Trajectory,
     TrajectoryStep,
     ExperimentResultData
@@ -76,11 +77,30 @@ class RecommendationService:
             for rec in page_recs:
                 # Extract formulation
                 formulation_dict = rec.formulation
-                formulation = FormulationData(
-                    HBD=formulation_dict.get("HBD", "Unknown"),
-                    HBA=formulation_dict.get("HBA", "Unknown"),
-                    molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
-                )
+
+                # Check if multi-component or binary formulation
+                if "components" in formulation_dict and formulation_dict["components"]:
+                    # Multi-component formulation
+                    components = [
+                        ComponentData(
+                            name=comp.get("name", "Unknown"),
+                            role=comp.get("role", "Unknown"),
+                            function=comp.get("function")
+                        )
+                        for comp in formulation_dict["components"]
+                    ]
+                    formulation = FormulationData(
+                        components=components,
+                        num_components=formulation_dict.get("num_components", len(components)),
+                        molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
+                    )
+                else:
+                    # Binary formulation (backward compatible)
+                    formulation = FormulationData(
+                        HBD=formulation_dict.get("HBD", "Unknown"),
+                        HBA=formulation_dict.get("HBA", "Unknown"),
+                        molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
+                    )
 
                 # Get performance score from experiment result
                 performance_score = None
@@ -145,11 +165,30 @@ class RecommendationService:
 
             # Convert formulation
             formulation_dict = rec.formulation
-            formulation = FormulationData(
-                HBD=formulation_dict.get("HBD", "Unknown"),
-                HBA=formulation_dict.get("HBA", "Unknown"),
-                molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
-            )
+
+            # Check if multi-component or binary formulation
+            if "components" in formulation_dict and formulation_dict["components"]:
+                # Multi-component formulation
+                components = [
+                    ComponentData(
+                        name=comp.get("name", "Unknown"),
+                        role=comp.get("role", "Unknown"),
+                        function=comp.get("function")
+                    )
+                    for comp in formulation_dict["components"]
+                ]
+                formulation = FormulationData(
+                    components=components,
+                    num_components=formulation_dict.get("num_components", len(components)),
+                    molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
+                )
+            else:
+                # Binary formulation (backward compatible)
+                formulation = FormulationData(
+                    HBD=formulation_dict.get("HBD", "Unknown"),
+                    HBA=formulation_dict.get("HBA", "Unknown"),
+                    molar_ratio=formulation_dict.get("molar_ratio", "Unknown")
+                )
 
             # Convert trajectory
             trajectory_steps = []

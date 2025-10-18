@@ -1,0 +1,11 @@
+{
+  "REC_20251017_135425_react_test_001": {
+    "task_id": "react_test_001",
+    "status": "PENDING",
+    "created_at": "2025-10-17T13:54:25.346423",
+    "updated_at": "2025-10-17T13:54:25.346431",
+    "target_material": "cellulose",
+    "target_temperature": 25,
+    "file": "data\\recommendations\\REC_20251017_135425_react_test_001.json"
+  }
+}
