@@ -7,5 +7,18 @@
     "target_material": "cellulose",
     "target_temperature": 25,
     "file": "data\\recommendations\\REC_20251017_135425_react_test_001.json"
+  },
+  "REC_20251021_131438_memory_fix_test_001": {
+    "task_id": "memory_fix_test_001",
+    "status": "PENDING",
+    "created_at": "2025-10-21T13:14:38.738474",
+    "updated_at": "2025-10-21T13:14:38.738479",
+    "target_material": "lignin",
+    "target_temperature": -10,
+    "formulation_summary": "? : ? (?)",
+    "formulation": {},
+    "confidence": 0.0,
+    "performance_score": null,
+    "file": "C:\\D\\CursorProj\\DES-system-design\\src\\agent\\data\\recommendations\\REC_20251021_131438_memory_fix_test_001.json"
   }
 }

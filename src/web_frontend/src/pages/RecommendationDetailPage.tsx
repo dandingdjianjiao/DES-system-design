@@ -19,6 +19,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoadingOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { recommendationService } from '../services';
@@ -32,24 +33,63 @@ function RecommendationDetailPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<RecommendationDetail | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
-  useEffect(() => {
+  // Fetch detail function (can be called manually or by polling)
+  const fetchDetail = async () => {
     if (!id) return;
 
-    const fetchDetail = async () => {
-      setLoading(true);
-      try {
-        const response = await recommendationService.getRecommendationDetail(id);
-        setDetail(response.data);
-      } catch (error) {
-        console.error('Failed to fetch recommendation detail:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    try {
+      const response = await recommendationService.getRecommendationDetail(id);
+      setDetail(response.data);
 
+      // If status is GENERATING, start polling if not already polling
+      if (response.data.status === 'GENERATING') {
+        if (!pollingInterval) {
+          const interval = window.setInterval(async () => {
+            try {
+              const pollResponse = await recommendationService.getRecommendationDetail(id);
+              setDetail(pollResponse.data);
+
+              // Stop polling if status changed
+              if (pollResponse.data.status !== 'GENERATING') {
+                window.clearInterval(interval);
+                setPollingInterval(null);
+              }
+            } catch (error) {
+              console.error('Polling failed:', error);
+            }
+          }, 5000); // Poll every 5 seconds
+          setPollingInterval(interval);
+        }
+      } else {
+        // Stop polling if status is not GENERATING
+        if (pollingInterval) {
+          window.clearInterval(pollingInterval);
+          setPollingInterval(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch recommendation detail:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
     fetchDetail();
   }, [id]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        window.clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   if (loading) {
     return (
@@ -104,13 +144,18 @@ function RecommendationDetailPage() {
             提交实验反馈
           </Button>
         )}
+        {pollingInterval && (
+          <Tag color="blue" icon={<SyncOutlined spin />}>
+            自动刷新中 (每5秒)
+          </Tag>
+        )}
       </Space>
 
       {/* Special alert for GENERATING status */}
       {detail.status === 'GENERATING' && (
         <Alert
           message="配方生成中"
-          description="AI Agent 正在后台分析任务并生成配方推荐，这可能需要几分钟时间。请稍后刷新页面查看结果。"
+          description="AI Agent 正在后台分析任务并生成配方推荐，这可能需要几分钟时间。页面将每5秒自动刷新，无需手动操作。"
           type="info"
           showIcon
           icon={<Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />}

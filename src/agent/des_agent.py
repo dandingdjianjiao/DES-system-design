@@ -713,6 +713,9 @@ Output JSON:
             # Use best candidate
             formulation_result = knowledge_state["formulation_candidates"][0]
 
+        # Add memories_used to formulation_result for trajectory persistence
+        formulation_result["memories_used"] = [m.title for m in (knowledge_state["memories"] or [])]
+
         # ===== Create Trajectory Record =====
         trajectory = Trajectory(
             task_id=task_id,
@@ -780,20 +783,80 @@ Output JSON:
         """
         Retrieve relevant memories for the task.
 
+        NEW: LLM decides how many memories to retrieve based on task complexity and memory availability.
+
         Args:
             task: Task dictionary
 
         Returns:
             List of relevant MemoryItem objects
         """
+        # Get total number of memories in the bank
+        total_memories = len(self.memory.get_all_memories())
+
+        logger.info(f"[Memory Retrieval] Total memories in bank: {total_memories}")
+
+        if total_memories == 0:
+            logger.info("[Memory Retrieval] No memories available")
+            return []
+
+        # Let LLM decide how many memories to retrieve
+        decision_prompt = f"""You are deciding how many memories to retrieve for a DES formulation task.
+
+**Task**: {task['description']}
+**Target Material**: {task['target_material']}
+**Target Temperature**: {task.get('target_temperature', 25)}°C
+**Constraints**: {task.get('constraints', {})}
+
+**Memory Bank Status**:
+- Total memories available: {total_memories}
+- These memories contain validated experimental data from past DES formulations
+
+**Your Decision**:
+Decide how many memories to retrieve (top_k parameter) based on:
+1. **Task complexity**: Simple binary DES → fewer memories (1-3); Complex multi-component DES → more memories (3-10)
+2. **Available memories**: If total < 5, retrieve all; if total >= 5, be selective
+3. **Material specificity**: Novel material → retrieve more for broader context; Common material → fewer targeted memories
+4. **Temperature**: Non-standard temperature → retrieve more examples; Standard temperature → fewer examples
+
+**Guidelines**:
+- **Minimum**: 2 (always try to get at least two relevant memory)
+- **Maximum**: min(10, total_memories) (don't overwhelm with too many)
+
+Output ONLY a JSON object:
+{{
+    "top_k": <number>,
+    "reasoning": "<1-2 sentences explaining your choice>"
+}}
+"""
+
+        try:
+            llm_response = self.llm_client(decision_prompt)
+            decision = self._parse_json_response(llm_response)
+
+            # Extract top_k with validation
+            top_k = decision.get("top_k", 3)
+            reasoning = decision.get("reasoning", "Default retrieval strategy")
+
+            # Validate and constrain top_k
+            top_k = max(1, min(top_k, total_memories, 10))
+
+            logger.info(f"[Memory Retrieval] LLM decision: retrieve top_{top_k} memories")
+            logger.info(f"[Memory Retrieval] Reasoning: {reasoning}")
+
+        except Exception as e:
+            logger.warning(f"[Memory Retrieval] LLM decision failed: {e}, using default top_k=3")
+            top_k = min(3, total_memories)
+
+        # Perform retrieval with LLM-decided top_k
         query = MemoryQuery(
             query_text=task["description"],
-            top_k=self.config.get("memory", {}).get("retrieval_top_k", 3),
+            top_k=top_k,
             min_similarity=self.config.get("memory", {}).get("min_similarity", 0.0)
         )
 
         memories = self.retriever.retrieve(query)
-        logger.debug(f"Retrieved {len(memories)} memories for task")
+        logger.info(f"[Memory Retrieval] Retrieved {len(memories)} memories (requested: {top_k}, available: {total_memories})")
 
         return memories
 

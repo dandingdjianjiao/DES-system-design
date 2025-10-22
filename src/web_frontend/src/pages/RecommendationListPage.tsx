@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Table,
@@ -44,7 +44,9 @@ function RecommendationListPage() {
   const [pageSize, setPageSize] = useState(10);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [materialFilter, setMaterialFilter] = useState<string | undefined>(undefined);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Use ref instead of state to avoid closure issues
+  const pollingIntervalRef = useRef<number | null>(null);
 
   // Track if there are any generating tasks for polling
   const [hasGeneratingTasks, setHasGeneratingTasks] = useState(false);
@@ -83,24 +85,26 @@ function RecommendationListPage() {
       // Check if need to start/stop polling
       if (statsResp.data.GENERATING > 0) {
         setHasGeneratingTasks(true);
-        if (!pollingInterval) {
-          const interval = setInterval(() => {
+        // Start polling if not already running
+        if (!pollingIntervalRef.current) {
+          const interval = window.setInterval(() => {
             fetchRecommendations();
             fetchStatusCounts();
           }, 5000);
-          setPollingInterval(interval);
+          pollingIntervalRef.current = interval;
         }
       } else {
         setHasGeneratingTasks(false);
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-          setPollingInterval(null);
+        // Stop polling if running
+        if (pollingIntervalRef.current) {
+          window.clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
         }
       }
     } catch (error) {
       console.error('Failed to fetch status counts:', error);
     }
-  }, [materialFilter, pollingInterval]);
+  }, [materialFilter]);
 
   // Determine status filter based on active tab
   const getStatusFilter = useCallback(() => {
@@ -150,11 +154,11 @@ function RecommendationListPage() {
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
+      if (pollingIntervalRef.current) {
+        window.clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [pollingInterval]);
+  }, []);
 
   const columns = [
     {
@@ -392,7 +396,7 @@ function RecommendationListPage() {
             手动刷新
           </Button>
 
-          {pollingInterval && (
+          {hasGeneratingTasks && (
             <Tag color="blue" icon={<SyncOutlined spin />}>
               自动刷新中
             </Tag>
