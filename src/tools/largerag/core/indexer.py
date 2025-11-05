@@ -104,18 +104,29 @@ class LargeRAGIndexer:
         if splitter_type == "semantic":
             # 语义切分（需要额外 embedding 计算）
             from llama_index.core.node_parser import SemanticSplitterNodeParser
+
+            # 转换阈值：配置文件使用 0-1 范围，LlamaIndex 期望 0-100 整数
+            threshold_config = self.settings.document_processing.semantic_breakpoint_threshold
+            if isinstance(threshold_config, float) and 0 <= threshold_config <= 1:
+                # 转换 0-1 → 0-100
+                threshold_percentile = int(threshold_config * 100)
+            else:
+                # 如果��经是整数，直接使用
+                threshold_percentile = int(threshold_config)
+
             splitter = SemanticSplitterNodeParser(
                 embed_model=self.embed_model,
-                breakpoint_percentile_threshold=self.settings.document_processing.semantic_breakpoint_threshold,
+                breakpoint_percentile_threshold=threshold_percentile,
                 buffer_size=self.settings.document_processing.semantic_buffer_size,
             )
-            logger.info(f"Using semantic splitter (threshold={self.settings.document_processing.semantic_breakpoint_threshold})")
+            logger.info(f"Using semantic splitter (threshold={threshold_percentile}%, buffer_size={self.settings.document_processing.semantic_buffer_size})")
         elif splitter_type == "sentence":
             # 句子切分（保持句子完整性）
             from llama_index.core.node_parser import SentenceSplitter
             splitter = SentenceSplitter(
                 chunk_size=self.settings.document_processing.chunk_size,
                 chunk_overlap=self.settings.document_processing.chunk_overlap,
+                paragraph_separator=self.settings.document_processing.separator,
             )
             logger.info(f"Using sentence splitter (size={self.settings.document_processing.chunk_size})")
         else:  # "token" (default)
@@ -124,6 +135,7 @@ class LargeRAGIndexer:
             splitter = SentenceSplitter(
                 chunk_size=self.settings.document_processing.chunk_size,
                 chunk_overlap=self.settings.document_processing.chunk_overlap,
+                paragraph_separator=self.settings.document_processing.separator,
             )
             logger.info(f"Using token-based splitter (size={self.settings.document_processing.chunk_size}, overlap={self.settings.document_processing.chunk_overlap})")
 

@@ -23,17 +23,34 @@ document_processing:
   chunk_overlap: 50                             # 重叠大小（token，仅 token 模式）
   separator: "\n\n"                             # 分块分隔符（仅 token 模式）
 
+  # JSON分块聚合配置（适用于所有splitter_type）
+  aggregate_small_chunks: false                 # 是否在文档加载时聚合JSON文件内的所有片段
+                                                 # false（默认）: 保留JSON原始分块点，每个text条目创建一个Document
+                                                 #   - 适合: 需要保留文档结构、精确段落级检索、元数据重要
+                                                 #   - 示例: 76个text条目 → 76个Documents → Splitter处理
+                                                 # true: 消除JSON分块点，整个文件的text条目合并为一个Document
+                                                 #   - 适合: 统一重新分块、不受JSON结构限制、最大化上下文
+                                                 #   - semantic模式推荐: 让算法看到完整文档，避免JSON分块点干扰语义边界识别
+                                                 #   - 示例: 76个text条目 → 1个Document → Splitter统一分块
+                                                 # 注意: 聚合发生在加载阶段，与chunk_size无关，Splitter会后续处理
+
   # Semantic 切分配置（当 splitter_type=semantic 时生效）
-  semantic_breakpoint_threshold: 0.5            # 语义断点阈值 (0-1)
-  semantic_buffer_size: 1                       # 缓冲区大小
+  semantic_breakpoint_threshold: 0.5            # 语义断点阈值 (0-1 浮点数，将转换为 0-100 百分位数)
+                                                 # 0.5 → 50% 百分位，表示在语义相似度最低的 50% 处切分
+                                                 # 值越高越保守（更少切分），值越低越激进（更多切分）
+  semantic_buffer_size: 1                       # 缓冲区大小（句子窗口大小）
 
 # ============ 检索配置 ============
 retrieval:
   similarity_top_k: 20                          # 向量检索召回数量
   rerank_top_n: 10                               # Reranker 最终返回数量
-  similarity_threshold: 0.8                     # 相似度阈值（>0 启用，0 禁用）
-                                                 # 启用后，只返回分数 >= 阈值的结果
-                                                 # 推荐值：0.6-0.8（宁缺毋滥）
+  similarity_threshold: 0.5                     # 向量检索相似度阈值（0 = 禁用，>0 = 启用）
+                                                 # 过滤 cosine 相似度 < 该值的文档
+                                                 # 推荐值：0.6-0.8
+  rerank_threshold: 0.0                          # Reranker 分数阈值（0 = 禁用，>0 = 启用）
+                                                 # 过滤 reranker 分数 < 该值的文档
+                                                 # 推荐值：0.5-0.7（Reranker分数范围通常与cosine不同）
+                                                 # 注意：可独立于 similarity_threshold 设置
 
 # ============ Reranker 配置 ============
 reranker:

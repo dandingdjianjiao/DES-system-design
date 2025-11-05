@@ -8,8 +8,46 @@ LargeRAG 性能测试脚本
 3. 记录每个问题的答案、检索性能和LLM生成质量
 
 运行方式：
-    python examples/performance_test/perf_test.py              # 正常运行（加载已有索引）
+    # 基本运行
+    python examples/performance_test/perf_test.py              # 加载已有索引
     python examples/performance_test/perf_test.py --rebuild    # 强制重建索引
+
+    # 查看帮助
+    python examples/performance_test/perf_test.py --help       # 查看所有可用参数
+
+    # 覆盖配置参数（测试不同配置的性能）
+    python examples/performance_test/perf_test.py --similarity-top-k 30 --rerank-top-n 15
+    python examples/performance_test/perf_test.py --llm-model qwen-max --llm-temperature 0.2
+    python examples/performance_test/perf_test.py --chunk-size 1024 --chunk-overlap 100
+    python examples/performance_test/perf_test.py --no-rerank  # 禁用 Reranker
+
+可覆盖的配置参数：
+    检索配置：
+      --similarity-top-k N           向量检索召回数量
+      --rerank-top-n N               Reranker 最终返回数量
+      --similarity-threshold F       向量检索相似度阈值 (0-1)
+      --rerank-threshold F           Reranker 分数阈值
+      --no-rerank                    禁用 Reranker
+
+    LLM 配置：
+      --llm-model MODEL              LLM 模型名称
+      --llm-temperature F            LLM 温度参数 (0-1)
+      --llm-max-tokens N             LLM 最大生成 tokens
+
+    文档处理配置：
+      --splitter-type TYPE           分块策略 (token/semantic/sentence)
+      --chunk-size N                 文档分块大小
+      --chunk-overlap N              文档分块重叠大小
+      --separator STR                分块分隔符
+      --aggregate-small-chunks       聚合JSON文件内的所有片段
+      --semantic-breakpoint-threshold F  语义断点阈值 (0-1)
+      --semantic-buffer-size N       语义缓冲区大小
+
+    向量存储配置：
+      --vector-store-type TYPE       向量存储类型
+      --persist-directory PATH       持久化目录
+      --collection-name NAME         集合名称
+      --distance-metric METRIC       距离度量 (cosine/l2/ip)
 
 数据结构：
     src/tools/largerag/data/rag_performance_test/
@@ -23,6 +61,7 @@ import json
 import argparse
 from pathlib import Path
 from datetime import datetime
+from dataclasses import asdict
 
 # 添加项目根目录到sys.path
 # perf_test.py → performance_test → examples → largerag → tools → src → PROJECT_ROOT
@@ -47,12 +86,207 @@ def print_subsection(title: str):
 
 def main():
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='LargeRAG 性能测试')
+    parser = argparse.ArgumentParser(
+        description='LargeRAG 性能测试',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例用法:
+  # 基本运行
+  python perf_test.py
+
+  # 强制重建索引
+  python perf_test.py --rebuild
+
+  # 禁用缓存（测试配置变化时推荐）
+  python perf_test.py --rebuild --no-cache
+
+  # 覆盖检索配置
+  python perf_test.py --similarity-top-k 30 --rerank-top-n 15
+  python perf_test.py --similarity-threshold 0.7 --rerank-threshold 0.5
+
+  # 覆盖 LLM 配置
+  python perf_test.py --llm-model qwen-max --llm-temperature 0.2
+
+  # 覆盖文档处理配置
+  python perf_test.py --chunk-size 1024 --chunk-overlap 100
+  python perf_test.py --splitter-type semantic --semantic-breakpoint-threshold 0.6
+  python perf_test.py --separator "\\n\\n\\n"
+  python perf_test.py --aggregate-small-chunks  # 聚合JSON片段
+
+  # 覆盖向量存储配置
+  python perf_test.py --collection-name test_collection --distance-metric l2
+  python perf_test.py --persist-directory /path/to/db
+
+  # 组合多个参数
+  python perf_test.py --chunk-size 768 --similarity-top-k 50 --llm-temperature 0.15
+
+  # 禁用 Reranker
+  python perf_test.py --no-rerank
+        """
+    )
+
+    # 基本选项
     parser.add_argument('--rebuild', action='store_true',
                        help='强制重建索引（即使已存在）')
+    parser.add_argument('--no-cache', action='store_true',
+                       help='禁用缓存（确保使用最新配置重建）')
+
+    # 检索配置参数
+    retrieval_group = parser.add_argument_group('检索配置参数')
+    retrieval_group.add_argument('--similarity-top-k', type=int, metavar='N',
+                                help='向量检索召回数量（默认: 20）')
+    retrieval_group.add_argument('--rerank-top-n', type=int, metavar='N',
+                                help='Reranker 最终返回数量（默认: 10）')
+    retrieval_group.add_argument('--similarity-threshold', type=float, metavar='FLOAT',
+                                help='向量检索相似度阈值 0-1（0=禁用，默认: 0.8）')
+    retrieval_group.add_argument('--rerank-threshold', type=float, metavar='FLOAT',
+                                help='Reranker 分数阈值（0=禁用，默认: 0.0）')
+
+    # Reranker 配置
+    reranker_group = parser.add_argument_group('Reranker 配置')
+    reranker_group.add_argument('--no-rerank', action='store_true',
+                               help='禁用 Reranker（默认启用）')
+
+    # LLM 配置参数
+    llm_group = parser.add_argument_group('LLM 配置参数')
+    llm_group.add_argument('--llm-model', type=str, metavar='MODEL',
+                          help='LLM 模型名称（默认: qwen-plus）')
+    llm_group.add_argument('--llm-temperature', type=float, metavar='FLOAT',
+                          help='LLM 温度参数 0-1（默认: 0.1）')
+    llm_group.add_argument('--llm-max-tokens', type=int, metavar='N',
+                          help='LLM 最大生成 tokens（默认: 3000）')
+
+    # 文档处理配置
+    doc_group = parser.add_argument_group('文档处理配置')
+    doc_group.add_argument('--splitter-type', type=str, metavar='TYPE',
+                          choices=['token', 'semantic', 'sentence'],
+                          help='分块策略: token/semantic/sentence（默认: token）')
+    doc_group.add_argument('--chunk-size', type=int, metavar='N',
+                          help='文档分块大小（默认: 512）')
+    doc_group.add_argument('--chunk-overlap', type=int, metavar='N',
+                          help='文档分块重叠大小（默认: 50）')
+    doc_group.add_argument('--separator', type=str, metavar='STR',
+                          help='分块分隔符（默认: \\n\\n）')
+    doc_group.add_argument('--semantic-breakpoint-threshold', type=float, metavar='FLOAT',
+                          help='语义断点阈值 0-1（默认: 0.5 → 50%%，值越高越保守，仅semantic模式）')
+    doc_group.add_argument('--semantic-buffer-size', type=int, metavar='N',
+                          help='语义缓冲区大小（默认: 1，仅semantic模式）')
+    doc_group.add_argument('--aggregate-small-chunks', action='store_true',
+                          help='聚合JSON文件内的所有片段为一个Document（默认: false）')
+
+    # 向量存储配置
+    vector_group = parser.add_argument_group('向量存储配置')
+    vector_group.add_argument('--vector-store-type', type=str, metavar='TYPE',
+                             help='向量存储类型（默认: chroma）')
+    vector_group.add_argument('--persist-directory', type=str, metavar='PATH',
+                             help='向量数据库持久化目录')
+    vector_group.add_argument('--collection-name', type=str, metavar='NAME',
+                             help='集合名称（默认: des_literature_v1）')
+    vector_group.add_argument('--distance-metric', type=str, metavar='METRIC',
+                             choices=['cosine', 'l2', 'ip'],
+                             help='距离度量: cosine/l2/ip（默认: cosine）')
+
     args = parser.parse_args()
 
+    # ============================================================
+    # 应用命令行参数覆盖到 SETTINGS
+    # ============================================================
+    overrides_applied = []
+
+    # 检索配置
+    if args.similarity_top_k is not None:
+        SETTINGS.retrieval.similarity_top_k = args.similarity_top_k
+        overrides_applied.append(f"retrieval.similarity_top_k = {args.similarity_top_k}")
+
+    if args.rerank_top_n is not None:
+        SETTINGS.retrieval.rerank_top_n = args.rerank_top_n
+        overrides_applied.append(f"retrieval.rerank_top_n = {args.rerank_top_n}")
+
+    if args.similarity_threshold is not None:
+        SETTINGS.retrieval.similarity_threshold = args.similarity_threshold
+        overrides_applied.append(f"retrieval.similarity_threshold = {args.similarity_threshold}")
+
+    if args.rerank_threshold is not None:
+        SETTINGS.retrieval.rerank_threshold = args.rerank_threshold
+        overrides_applied.append(f"retrieval.rerank_threshold = {args.rerank_threshold}")
+
+    # Reranker 配置
+    if args.no_rerank:
+        SETTINGS.reranker.enabled = False
+        overrides_applied.append(f"reranker.enabled = False")
+
+    # 缓存配置
+    if args.no_cache:
+        SETTINGS.cache.enabled = False
+        overrides_applied.append(f"cache.enabled = False")
+
+    # LLM 配置
+    if args.llm_model is not None:
+        SETTINGS.llm.model = args.llm_model
+        overrides_applied.append(f"llm.model = {args.llm_model}")
+
+    if args.llm_temperature is not None:
+        SETTINGS.llm.temperature = args.llm_temperature
+        overrides_applied.append(f"llm.temperature = {args.llm_temperature}")
+
+    if args.llm_max_tokens is not None:
+        SETTINGS.llm.max_tokens = args.llm_max_tokens
+        overrides_applied.append(f"llm.max_tokens = {args.llm_max_tokens}")
+
+    # 文档处理配置
+    if args.splitter_type is not None:
+        SETTINGS.document_processing.splitter_type = args.splitter_type
+        overrides_applied.append(f"document_processing.splitter_type = {args.splitter_type}")
+
+    if args.chunk_size is not None:
+        SETTINGS.document_processing.chunk_size = args.chunk_size
+        overrides_applied.append(f"document_processing.chunk_size = {args.chunk_size}")
+
+    if args.chunk_overlap is not None:
+        SETTINGS.document_processing.chunk_overlap = args.chunk_overlap
+        overrides_applied.append(f"document_processing.chunk_overlap = {args.chunk_overlap}")
+
+    if args.separator is not None:
+        SETTINGS.document_processing.separator = args.separator
+        overrides_applied.append(f"document_processing.separator = {args.separator}")
+
+    if args.semantic_breakpoint_threshold is not None:
+        SETTINGS.document_processing.semantic_breakpoint_threshold = args.semantic_breakpoint_threshold
+        overrides_applied.append(f"document_processing.semantic_breakpoint_threshold = {args.semantic_breakpoint_threshold}")
+
+    if args.semantic_buffer_size is not None:
+        SETTINGS.document_processing.semantic_buffer_size = args.semantic_buffer_size
+        overrides_applied.append(f"document_processing.semantic_buffer_size = {args.semantic_buffer_size}")
+
+    if args.aggregate_small_chunks:
+        SETTINGS.document_processing.aggregate_small_chunks = True
+        overrides_applied.append(f"document_processing.aggregate_small_chunks = True")
+
+    # 向量存储配置
+    if args.vector_store_type is not None:
+        SETTINGS.vector_store.type = args.vector_store_type
+        overrides_applied.append(f"vector_store.type = {args.vector_store_type}")
+
+    if args.persist_directory is not None:
+        SETTINGS.vector_store.persist_directory = args.persist_directory
+        overrides_applied.append(f"vector_store.persist_directory = {args.persist_directory}")
+
+    if args.collection_name is not None:
+        SETTINGS.vector_store.collection_name = args.collection_name
+        overrides_applied.append(f"vector_store.collection_name = {args.collection_name}")
+
+    if args.distance_metric is not None:
+        SETTINGS.vector_store.distance_metric = args.distance_metric
+        overrides_applied.append(f"vector_store.distance_metric = {args.distance_metric}")
+
     print_section("LargeRAG 性能测试 - 10篇文献 + 10个问题")
+
+    # 显示参数覆盖信息
+    if overrides_applied:
+        print("\n⚙️  检测到命令行参数覆盖:")
+        for override in overrides_applied:
+            print(f"  ✓ {override}")
+        print()
 
     # ============================================================
     # 1. 设置测试参数
@@ -63,8 +297,12 @@ def main():
     test_data_dir = Path(__file__).parent.parent.parent / "data" / "rag_performance_test"
     question_file = test_data_dir / "question.txt"
 
-    # 自定义 collection 名称（避免与其他索引混淆）
-    collection_name = "rag_perf_test_10papers"
+    # 使用配置中的 collection 名称（可通过命令行参数覆盖）
+    # 如果用户未指定，使用默认值 "rag_perf_test_10papers"
+    if not args.collection_name:
+        # 用户未通过命令行指定，使用测试专用的 collection 名称
+        SETTINGS.vector_store.collection_name = "rag_perf_test_10papers"
+    collection_name = SETTINGS.vector_store.collection_name
 
     print(f"\n测试数据目录: {test_data_dir}")
     print(f"问题文件: {question_file}")
@@ -271,18 +509,7 @@ def main():
             "num_literature": len(literature_folders),
             "num_questions": len(questions),
         },
-        "config_parameters": {
-            "similarity_top_k": SETTINGS.retrieval.similarity_top_k,
-            "rerank_top_n": SETTINGS.retrieval.rerank_top_n,
-            "similarity_threshold": SETTINGS.retrieval.similarity_threshold,
-            "reranker_enabled": SETTINGS.reranker.enabled,
-            "reranker_model": SETTINGS.reranker.model,
-            "llm_model": SETTINGS.llm.model,
-            "llm_temperature": SETTINGS.llm.temperature,
-            "llm_max_tokens": SETTINGS.llm.max_tokens,
-            "chunk_size": SETTINGS.document_processing.chunk_size,
-            "chunk_overlap": SETTINGS.document_processing.chunk_overlap,
-        },
+        "config_parameters": asdict(SETTINGS),  # 保存所有配置参数
         "performance_summary": {
             "avg_retrieval_time_sec": round(avg_retrieval_time, 2),
             "avg_query_time_sec": round(avg_query_time, 2),

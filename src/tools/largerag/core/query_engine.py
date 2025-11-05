@@ -113,13 +113,13 @@ class LargeRAGQueryEngine:
             postprocessors.append(self.reranker)
             logger.info(f"Reranker enabled: {self.settings.reranker.model}")
 
-        # 2. Reranker 之后的阈值过滤（如果启用）
-        if self.settings.retrieval.similarity_threshold > 0:
+        # 2. Reranker 之后的阈值过滤（如果启用 rerank_threshold）
+        if self.settings.retrieval.rerank_threshold > 0:
             threshold_filter = SimilarityThresholdFilter(
-                threshold=self.settings.retrieval.similarity_threshold
+                threshold=self.settings.retrieval.rerank_threshold
             )
             postprocessors.append(threshold_filter)
-            logger.info(f"Post-rerank threshold filter enabled: {self.settings.retrieval.similarity_threshold}")
+            logger.info(f"Post-rerank threshold filter enabled: {self.settings.retrieval.rerank_threshold}")
 
         # 构建 Query Engine
         self.query_engine = RetrieverQueryEngine.from_args(
@@ -204,15 +204,14 @@ class LargeRAGQueryEngine:
             )
             nodes = reranker.postprocess_nodes(nodes, query_str=query_text)
 
-            # 如果启用了相似度阈值，也对Reranker分数进行过滤
-            # 注意：Reranker分数和向量相似度是不同的度量，这里使用相同阈值可能过于严格
-            if self.settings.retrieval.similarity_threshold > 0:
+            # 如果启用了 rerank_threshold，对 Reranker 分数进行过滤
+            if self.settings.retrieval.rerank_threshold > 0:
                 original_count = len(nodes)
-                nodes = [n for n in nodes if n.score >= self.settings.retrieval.similarity_threshold]
+                nodes = [n for n in nodes if n.score >= self.settings.retrieval.rerank_threshold]
                 if len(nodes) < original_count:
                     logger.info(
                         f"Filtered {original_count - len(nodes)} nodes by rerank score threshold "
-                        f"(threshold: {self.settings.retrieval.similarity_threshold})"
+                        f"(threshold: {self.settings.retrieval.rerank_threshold})"
                     )
 
         # 格式化结果并返回前 top_k 个

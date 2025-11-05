@@ -8,11 +8,13 @@
 5. 记录处理日志（跳过的文档、错误）
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 import json
 import logging
 from llama_index.core import Document
+
+from ..config.settings import SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,26 @@ logger = logging.getLogger(__name__)
 class DocumentProcessor:
     """文献文件夹到 LlamaIndex Document 的转换器"""
 
-    def __init__(self):
+    def __init__(self, aggregate_small_chunks: Optional[bool] = None, separator: Optional[str] = None):
+        """
+        Args:
+            aggregate_small_chunks: 是否聚合JSON文件内的所有片段为一个Document
+                - False (默认): 保留JSON原始分块点，每个text条目一个Document
+                - True: 一个JSON文件的所有text条目合并为一个Document
+                - None: 从 SETTINGS 读取配置
+            separator: 聚合时使用的分隔符（None 时从 SETTINGS 读取）
+        """
+        # 如果未指定，从 SETTINGS 读取配置
+        self.aggregate_small_chunks = (
+            aggregate_small_chunks
+            if aggregate_small_chunks is not None
+            else SETTINGS.document_processing.aggregate_small_chunks
+        )
+        self.separator = (
+            separator
+            if separator is not None
+            else SETTINGS.document_processing.separator
+        )
         self.processed_count = 0
         self.skipped_count = 0
 
@@ -95,12 +116,17 @@ class DocumentProcessor:
                 ...
             }
         ]
+
+        行为模式：
+        - aggregate_small_chunks=False: 每个text条目创建一个Document（保留JSON分块点）
+        - aggregate_small_chunks=True: 所有text条目合并为一个Document（消除JSON分块点）
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content_list = json.load(f)
 
-            documents = []
+            # 收集所有text片段
+            text_items = []
             for idx, item in enumerate(content_list):
                 # 只处理 text 类型
                 if item.get("type") != "text":
@@ -111,21 +137,57 @@ class DocumentProcessor:
                     logger.warning(f"[{doc_hash}] Item {idx}: empty text, skipping")
                     continue
 
-                # 提取元数据
-                metadata = {
-                    "doc_hash": doc_hash,
+                text_items.append({
+                    "text": text,
                     "page_idx": item.get("page_idx", -1),
                     "text_level": item.get("text_level", 0),
                     "has_citations": bool(item.get("cites")),
-                    "source_file": "content_list_process.json",
                     "item_idx": idx,
+                })
+
+            if not text_items:
+                logger.warning(f"[{doc_hash}] No valid text items found")
+                return []
+
+            documents = []
+
+            if self.aggregate_small_chunks:
+                # 聚合模式：合并所有text为一个Document
+                combined_text = self.separator.join([item["text"] for item in text_items])
+
+                metadata = {
+                    "doc_hash": doc_hash,
+                    "source_file": "content_list_process.json",
+                    "aggregated": True,
+                    "num_segments": len(text_items),
+                    "page_idx_range": f"{text_items[0]['page_idx']}-{text_items[-1]['page_idx']}",
                 }
 
-                doc = Document(text=text, metadata=metadata)
+                doc = Document(text=combined_text, metadata=metadata)
                 documents.append(doc)
                 self.processed_count += 1
 
-            logger.info(f"[{doc_hash}] Loaded {len(documents)} text segments from content_list_process.json")
+                logger.info(f"[{doc_hash}] Aggregated {len(text_items)} text segments into 1 document")
+
+            else:
+                # 非聚合模式：每个text条目一个Document（当前行为）
+                for item in text_items:
+                    metadata = {
+                        "doc_hash": doc_hash,
+                        "page_idx": item["page_idx"],
+                        "text_level": item["text_level"],
+                        "has_citations": item["has_citations"],
+                        "source_file": "content_list_process.json",
+                        "item_idx": item["item_idx"],
+                        "aggregated": False,
+                    }
+
+                    doc = Document(text=item["text"], metadata=metadata)
+                    documents.append(doc)
+                    self.processed_count += 1
+
+                logger.info(f"[{doc_hash}] Loaded {len(documents)} text segments from content_list_process.json")
+
             return documents
 
         except json.JSONDecodeError as e:
@@ -154,33 +216,73 @@ class DocumentProcessor:
                 }
             ]
         }
+
+        行为模式：
+        - aggregate_small_chunks=False: 每个paragraph一个Document
+        - aggregate_small_chunks=True: 所有paragraphs合并为一个Document
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 article_data = json.load(f)
 
             paragraphs = article_data.get("paragraphs", [])
-            documents = []
 
+            # 收集所有有效段落
+            valid_paras = []
             for para in paragraphs:
                 text = para.get("paragraph", "").strip()
-                if not text:
-                    continue
+                if text:
+                    valid_paras.append({
+                        "text": text,
+                        "pagenum": para.get("pagenum", -1),
+                        "text_level": para.get("text_level", 0),
+                        "paragraph_type": para.get("type", ""),
+                        "paragraph_idx": para.get("paragraph_idx", -1),
+                    })
+
+            if not valid_paras:
+                logger.warning(f"[{doc_hash}] No valid paragraphs found")
+                return []
+
+            documents = []
+
+            if self.aggregate_small_chunks:
+                # 聚合模式：合并所有paragraphs为一个Document
+                combined_text = self.separator.join([p["text"] for p in valid_paras])
 
                 metadata = {
                     "doc_hash": doc_hash,
-                    "page_idx": para.get("pagenum", -1),
-                    "text_level": para.get("text_level", 0),
-                    "paragraph_type": para.get("type", ""),
                     "source_file": "article.json",
-                    "paragraph_idx": para.get("paragraph_idx", -1),
+                    "aggregated": True,
+                    "num_paragraphs": len(valid_paras),
+                    "page_idx_range": f"{valid_paras[0]['pagenum']}-{valid_paras[-1]['pagenum']}",
                 }
 
-                doc = Document(text=text, metadata=metadata)
+                doc = Document(text=combined_text, metadata=metadata)
                 documents.append(doc)
                 self.processed_count += 1
 
-            logger.info(f"[{doc_hash}] Loaded {len(documents)} paragraphs from article.json")
+                logger.info(f"[{doc_hash}] Aggregated {len(valid_paras)} paragraphs into 1 document")
+
+            else:
+                # 非聚合模式：每个paragraph一个Document
+                for para in valid_paras:
+                    metadata = {
+                        "doc_hash": doc_hash,
+                        "page_idx": para["pagenum"],
+                        "text_level": para["text_level"],
+                        "paragraph_type": para["paragraph_type"],
+                        "source_file": "article.json",
+                        "paragraph_idx": para["paragraph_idx"],
+                        "aggregated": False,
+                    }
+
+                    doc = Document(text=para["text"], metadata=metadata)
+                    documents.append(doc)
+                    self.processed_count += 1
+
+                logger.info(f"[{doc_hash}] Loaded {len(documents)} paragraphs from article.json")
+
             return documents
 
         except json.JSONDecodeError as e:

@@ -83,6 +83,7 @@ class DocumentProcessingConfig:
     chunk_size: int
     chunk_overlap: int
     separator: str
+    aggregate_small_chunks: bool = False  # 是否聚合小于chunk_size的JSON分块
     semantic_breakpoint_threshold: Optional[float] = 0.5
     semantic_buffer_size: Optional[int] = 1
 
@@ -91,7 +92,8 @@ class DocumentProcessingConfig:
 class RetrievalConfig:
     similarity_top_k: int
     rerank_top_n: int
-    similarity_threshold: float
+    similarity_threshold: float  # 向量检索相似度阈值（0 = 禁用）
+    rerank_threshold: float      # Reranker 分数阈值（0 = 禁用）
 
 
 @dataclass
