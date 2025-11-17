@@ -24,6 +24,8 @@ from agent.des_agent import DESAgent
 from agent.utils.llm_client import LLMClient
 from agent.utils.embedding_client import EmbeddingClient
 from agent.config import get_config
+from agent.tools.largerag_adapter import create_largerag_adapter
+from agent.tools.corerag_adapter import CoreRAGAdapter
 
 from web_backend.config import get_web_config
 
@@ -123,6 +125,37 @@ class AgentLoader:
             self._rec_manager = RecommendationManager(storage_path=str(rec_dir))
             logger.info(f"RecommendationManager initialized: {rec_dir}")
 
+            # Initialize tool clients
+            logger.info("Initializing LargeRAG adapter...")
+            largerag_client = None
+            try:
+                largerag_client = create_largerag_adapter()
+                status = largerag_client.get_status()
+                if status["status"] == "ready":
+                    logger.info("✓ LargeRAG initialized and ready")
+                elif status["status"] == "no_index":
+                    logger.warning("LargeRAG index not loaded - queries will fail")
+                    logger.warning("Build index: python src/tools/largerag/examples/1_build_index.py")
+                else:
+                    logger.error(f"LargeRAG error: {status.get('message', 'Unknown')}")
+                    largerag_client = None
+            except Exception as e:
+                logger.error(f"Failed to initialize LargeRAG: {e}")
+                largerag_client = None
+
+            logger.info("Initializing CoreRAG adapter...")
+            corerag_client = None
+            try:
+                corerag_client = CoreRAGAdapter(max_workers=10)
+                if corerag_client.initialized:
+                    logger.info("✓ CoreRAG initialized and ready")
+                else:
+                    logger.warning("CoreRAG initialization failed - queries will fail")
+                    corerag_client = None
+            except Exception as e:
+                logger.error(f"Failed to initialize CoreRAG: {e}")
+                corerag_client = None
+
             # Initialize DESAgent
             memory_dir = web_config.get_memory_dir()
             memory_dir.mkdir(parents=True, exist_ok=True)
@@ -134,14 +167,18 @@ class AgentLoader:
                 extractor=extractor,
                 judge=judge,
                 rec_manager=self._rec_manager,
-                corerag_client=None,  # TODO: Initialize if available
-                largerag_client=None,  # TODO: Initialize if available
+                corerag_client=corerag_client,  # Initialized tool
+                largerag_client=largerag_client,  # Initialized tool
                 config=agent_config.config  # Use full config from reasoningbank_config.yaml
             )
 
+            logger.info("="*60)
             logger.info("DESAgent initialized successfully")
-            logger.info(f"Memory auto-save: {memory_config.get('auto_save')}")
-            logger.info(f"Memory persist path: {memory_dir / 'reasoning_bank.json'}")
+            logger.info(f"  - Memory auto-save: {memory_config.get('auto_save')}")
+            logger.info(f"  - Memory persist path: {memory_dir / 'reasoning_bank.json'}")
+            logger.info(f"  - CoreRAG: {'✓ Ready' if corerag_client else '✗ Unavailable'}")
+            logger.info(f"  - LargeRAG: {'✓ Ready' if largerag_client else '✗ Unavailable'}")
+            logger.info("="*60)
 
             # Try to load existing memory bank
             memory_file = memory_dir / "reasoning_bank.json"

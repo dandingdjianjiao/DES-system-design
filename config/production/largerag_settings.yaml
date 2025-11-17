@@ -33,8 +33,8 @@ document_processing:
 
 # ============ 检索配置 ============
 retrieval:
-  similarity_top_k: 20
-  rerank_top_n: 10
+  similarity_top_k: 30
+  rerank_top_n: 15
   similarity_threshold: 0.5
   rerank_threshold: 0.0
 

@@ -8,10 +8,10 @@
 ontology:
   # Docker 容器内路径（映射到 src/tools/corerag/data/ontology/）
   directory_path: "/app/src/tools/corerag/data/ontology/"
-  ontology_file_name: "chem_ontology.owl"
+  ontology_file_name: "DES.owl"
   base_iri: "http://www.test.org/chem_ontologies/"
   # 生产环境不使用 Java 推理功能
-  # java_exe: ""
+  java_exe: ""
 
 entity_retrieval:
   top_k: 5
@@ -21,7 +21,7 @@ entity_retrieval:
   min_score_threshold: 0.1
 
 LLM:
-  model: "qwen3-235b-a22b-thinking-2507"
+  model: "qwen3-max"
   streaming: false
   temperature: 0
   max_tokens: 5000
