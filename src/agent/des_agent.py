@@ -172,7 +172,7 @@ class DESAgent:
 {self._format_observations(knowledge_state['observations'][-2:] if len(knowledge_state['observations']) > 0 else [])}
 
 **Available Actions**:
-1. **retrieve_memories** - Get past experiences from ReasoningBank (validated experimental data)
+1. **retrieve_memories** - Get past experiences from ReasoningBank (validated experimental data). NOTE: If returns empty, you may skip and proceed with other tools.
 2. **query_theory** - Query CoreRAG ontology for theoretical principles
 3. **query_literature** - Query LargeRAG for literature data
 4. **query_parallel** - Query both CoreRAG and LargeRAG simultaneously
@@ -181,19 +181,21 @@ class DESAgent:
 7. **finish** - Complete task (only if formulation is ready)
 
 **Tool Characteristics**:
-- **ReasoningBank (retrieve_memories)**: Instant retrieval of validated past experiments - **MOST RELIABLE**
+- **ReasoningBank (retrieve_memories)**: Instant retrieval of validated past experiments - **MOST RELIABLE WHEN AVAILABLE**. If empty, no relevant memories exist - this is acceptable, proceed with other tools.
 - **LargeRAG (query_literature)**: Fast vector search (~1-2 seconds) across 10,000+ papers
 - **CoreRAG (query_theory)**: Deep ontology reasoning (~5-10 minutes per query)
 
 **CRITICAL: Memory-First Strategy**:
 1. **ALWAYS retrieve memories FIRST** (in iteration 1) if not yet retrieved - memories contain validated experimental data
-2. Memories from real experiments are the **MOST RELIABLE** knowledge source
-3. Only query CoreRAG/LargeRAG if memories are insufficient or missing critical details
+2. **If retrieve_memories returns 0 results**: This is ACCEPTABLE - no relevant historical data exists. Immediately move on to theory/literature queries without retrying.
+3. Memories from real experiments are the **MOST RELIABLE** knowledge source when available
+4. Only query CoreRAG/LargeRAG if memories are insufficient or missing critical details
 
 **Research Requirements**:
 - **Preferred**: Memories + Theory (CoreRAG) + Literature (LargeRAG)
 - **Acceptable**: Memories + LLM parametric knowledge (if tools unavailable)
-- **Minimum**: High-quality memories from similar experiments
+- **Minimum**: Theory + Literature (if no relevant memories exist)
+- **Fallback**: LLM parametric knowledge (if all tools fail)
 
 **CoreRAG Usage Guidelines**:
 - CoreRAG is NECESSARY (DES design needs theoretical basis), but takes 5-10 minutes
@@ -204,16 +206,18 @@ class DESAgent:
 
 **Decision Guidelines by Stage**:
 - **Early ({stage == 'Early' and '✓' or '✗'})**:
-  - **Priority 1**: Retrieve memories if not yet done
-  - **Priority 2**: Query literature/theory only if memories insufficient
-- **Mid ({stage == 'Mid' and '✓' or '✗'})**: Ensure sufficient knowledge from memories + available tools
-- **Late ({stage == 'Late' and '✓' or '✗'})**: Must generate formulation soon. If you have memories + any additional knowledge → generate now
+  - **Priority 1**: Retrieve memories if not yet done. If returns 0, immediately proceed to Priority 2.
+  - **Priority 2**: Query literature/theory (memories empty OR insufficient)
+- **Mid ({stage == 'Mid' and '✓' or '✗'})**: Ensure sufficient knowledge from available sources (memories when available + tools)
+- **Late ({stage == 'Late' and '✓' or '✗'})**: Must generate formulation soon. If you have any knowledge sources (memories/theory/literature) → generate now
 
 **STRICT Anti-Loop Rules**:
 - **STOP after 2 consecutive failures**: If a tool fails 2 times in a row → STOP trying, move to alternative action
 - **Failed tool tracking**: CoreRAG failed {failed_theory} times, LargeRAG failed {failed_literature} times
-- **If both tools unavailable ({failed_theory >= 2 and failed_literature >= 2})**: RELY ON MEMORIES + LLM parametric knowledge and generate formulation immediately
-- **DO NOT repeat the same action if result is unchanged**: (e.g., retrieve_memories returns 0 twice → move on)
+- **If both tools unavailable ({failed_theory >= 2 and failed_literature >= 2})**: RELY ON MEMORIES (if available) + LLM parametric knowledge and generate formulation immediately
+- **DO NOT repeat the same action if result is unchanged**:
+  * If retrieve_memories returns 0 results → This means NO historical data exists. DO NOT retry. Immediately move to theory/literature queries.
+  * If a query returns empty/unchanged results twice → move to alternative action
 - **Progress awareness**: At {progress_pct}% complete, prioritize actions that move towards formulation generation
 
 **Your Task**:

@@ -136,14 +136,7 @@ class AgentLoader:
                 rec_manager=self._rec_manager,
                 corerag_client=None,  # TODO: Initialize if available
                 largerag_client=None,  # TODO: Initialize if available
-                config={
-                    "memory": {
-                        "auto_save": memory_config.get("auto_save", True),
-                        "persist_path": str(memory_dir / "reasoning_bank.json"),
-                        "retrieval_top_k": memory_config.get("retrieval_top_k", 3),
-                        "min_similarity": memory_config.get("min_similarity", 0.0)
-                    }
-                }
+                config=agent_config.config  # Use full config from reasoningbank_config.yaml
             )
 
             logger.info("DESAgent initialized successfully")

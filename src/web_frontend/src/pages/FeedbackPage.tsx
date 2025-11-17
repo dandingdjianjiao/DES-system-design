@@ -89,7 +89,7 @@ function FeedbackPage() {
     setSubmitting(true);
     try {
       // Submit feedback (async)
-      const response = await feedbackService.submitFeedback({
+      await feedbackService.submitFeedback({
         recommendation_id: id,
         experiment_result: values,
       });

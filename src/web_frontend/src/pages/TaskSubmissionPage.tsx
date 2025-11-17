@@ -19,7 +19,7 @@ import {
 } from 'antd';
 import { SendOutlined, ReloadOutlined } from '@ant-design/icons';
 import { taskService } from '../services';
-import type { TaskRequest, RecommendationSummary } from '../types';
+import type { TaskRequest } from '../types';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;

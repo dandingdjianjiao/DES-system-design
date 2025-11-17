@@ -5,6 +5,10 @@ services:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
+      args:
+        - http_proxy=${BUILD_HTTP_PROXY:-}
+        - https_proxy=${BUILD_HTTPS_PROXY:-}
+        - no_proxy=${BUILD_NO_PROXY:-}
     container_name: des-backend
     restart: unless-stopped
     ports:
@@ -20,8 +24,11 @@ services:
     volumes:
       # 持久化数据卷
       - ./data:/app/data
-      - ./src/tools/largerag/data:/app/src/tools/largerag/data
       - ./logs:/app/logs
+      # CoreRAG 数据（本体文件）
+      - ./src/tools/corerag/data:/app/src/tools/corerag/data
+      # LargeRAG 数据（向量数据库）
+      - ./src/tools/largerag/data:/app/src/tools/largerag/data
       # 生产配置文件（只读）
       - ./config/production/largerag_settings.yaml:/app/src/tools/largerag/config/settings.yaml:ro
       - ./config/production/corerag_settings.yaml:/app/src/tools/corerag/config/settings.yaml:ro
@@ -39,7 +46,12 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+        # Pass VITE_API_BASE_URL from .env.production (including empty string)
+        # Don't use :- as it treats empty string as unset
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+        - http_proxy=${BUILD_HTTP_PROXY:-}
+        - https_proxy=${BUILD_HTTPS_PROXY:-}
+        - no_proxy=${BUILD_NO_PROXY:-}
     container_name: des-frontend
     restart: unless-stopped
     ports:

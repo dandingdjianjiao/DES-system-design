@@ -6,8 +6,8 @@
 # ============================================
 
 ontology:
-  # Docker 容器内路径
-  directory_path: "/app/data/ontology/"
+  # Docker 容器内路径（映射到 src/tools/corerag/data/ontology/）
+  directory_path: "/app/src/tools/corerag/data/ontology/"
   ontology_file_name: "chem_ontology.owl"
   base_iri: "http://www.test.org/chem_ontologies/"
   # 生产环境不使用 Java 推理功能

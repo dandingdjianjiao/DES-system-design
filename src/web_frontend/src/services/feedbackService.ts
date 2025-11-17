@@ -5,7 +5,6 @@
 import api from './api';
 import type {
   FeedbackRequest,
-  FeedbackResponse,
   FeedbackAsyncResponse,
   FeedbackStatusResponse
 } from '../types';

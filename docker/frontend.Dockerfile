@@ -9,14 +9,15 @@ WORKDIR /app
 # Copy package files
 COPY src/web_frontend/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY src/web_frontend/ ./
 
 # Build argument for API URL
-ARG VITE_API_BASE_URL=http://localhost:8000
+# Default to empty string for nginx proxy mode (production deployment)
+ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # Build frontend
@@ -31,12 +32,16 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Set worker processes to 4 (default is auto, which may be too high)
+# Use .* to match any number of spaces
+RUN sed -i 's/worker_processes.*auto;/worker_processes 4;/' /etc/nginx/nginx.conf
+
 # Expose port
 EXPOSE 80
 
-# Health check
+# Health check (use IPv4 address to avoid IPv6 connection issues)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+    CMD wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

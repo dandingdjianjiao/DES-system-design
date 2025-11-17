@@ -10,7 +10,11 @@ import type { ErrorResponse } from '../types';
 
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+  // Use empty string for nginx proxy, or full URL for direct backend access
+  // Note: undefined check prevents empty string from falling back to default
+  baseURL: import.meta.env.VITE_API_BASE_URL !== undefined
+    ? import.meta.env.VITE_API_BASE_URL
+    : 'http://localhost:8000',
   timeout: 30000, // 30 seconds
   headers: {
     'Content-Type': 'application/json',

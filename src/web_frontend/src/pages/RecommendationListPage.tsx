@@ -6,12 +6,10 @@ import {
   Tag,
   Button,
   Space,
-  Select,
   Input,
   Card,
   message,
   Tabs,
-  Progress,
   Alert,
   Spin,
 } from 'antd';
