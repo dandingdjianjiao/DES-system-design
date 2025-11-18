@@ -232,12 +232,16 @@ class QueryManager:
             # 创建临时SQLite文件支持缓存
             import tempfile
             import os
-            from owlready2 import World
+            from owlready2 import World, onto_path
             
             sqlite_file = os.path.join(tempfile.gettempdir(), f"shared_ontology_object_lock_{os.getpid()}.sqlite3")
             
-            # 创建共享World
+            # 创建共享World，并确保本体目录可见
             shared_world = World()
+            resolved_dir = os.path.abspath(ontology_settings.directory_path)
+            shared_world.onto_path.append(resolved_dir)
+            if resolved_dir not in onto_path:
+                onto_path.append(resolved_dir)
             
             # 检查是否已有缓存
             if os.path.exists(sqlite_file):

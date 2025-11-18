@@ -87,6 +87,10 @@ class OntologySettings:
             # 这样避免多个实例共享同一个本体对象
             from owlready2 import World
             self._world = World()
+            resolved_dir = str(Path(self.directory_path).resolve())
+            self._world.onto_path.append(resolved_dir)
+            if resolved_dir not in onto_path:
+                onto_path.append(resolved_dir)
             self._ontology = self._world.get_ontology(self.ontology_iri).load(only_local=True)
         except Exception as e:
             print(f"Error loading ontology {self.ontology_iri}: {e}")
