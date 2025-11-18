@@ -25,9 +25,11 @@ import sys
 from pathlib import Path
 import atexit
 
-# Add corerag to path
+# Add project/src and corerag to path so `agent`、`config` 等可被找到
 import os
-corerag_path = Path(__file__).parent.parent.parent / "tools" / "corerag"
+project_src_path = Path(__file__).resolve().parents[2]  # /app/src
+corerag_path = project_src_path / "tools" / "corerag"
+sys.path.insert(0, str(project_src_path))
 sys.path.insert(0, str(corerag_path))
 
 # Load .env file if exists (to get API keys)
