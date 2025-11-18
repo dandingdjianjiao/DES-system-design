@@ -43,6 +43,32 @@ class NormalizedQueryBody(BaseModel):
             return []
         return value
 
+    @field_validator('filters', mode='before')
+    @classmethod
+    def ensure_filters_dict(cls, value):
+        """
+        LangGraph 结构化调用有时会把 JSON 对象作为字符串返回，
+        例如 filters='{\"temperature\": \"25°C\"}'。这里做一层
+        兼容性转换，尽量解析为 dict，避免因类型细节导致整个
+        查询归于 error 状态。
+        """
+        if value is None or isinstance(value, dict):
+            return value
+        # 尝试从字符串中解析 JSON
+        if isinstance(value, str):
+            import json
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return parsed
+                # 如果解析结果不是字典，则放弃并返回 None
+                return None
+            except Exception:
+                # 解析失败时直接返回 None，表示不设置过滤条件
+                return None
+        # 其他类型一律视为无效，归一为 None
+        return None
+
 class ToolCallStep(BaseModel):
     """Represents a single step in a tool execution plan."""
     tool: str = Field(description="The name of the tool to be called. Must be one of the available OntologyTools methods.")

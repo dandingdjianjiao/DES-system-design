@@ -21,7 +21,6 @@ class ToolPlannerAgent(AgentTemplate):
 Given a normalized query description and a list of available tools with their descriptions, create a sequential execution plan (a list of JSON objects) to fulfill the query.
 Each step in the plan should be a JSON object with 'tool' (the tool name) and 'params' (a dictionary of parameters for the tool).
 Only use the provided tools. Ensure the parameters match the tool's requirements based on its description.
-Output ONLY the JSON list of plan steps, without any other text or explanation.
 
 Available tools:
 {tool_descriptions}
@@ -269,7 +268,12 @@ Given a natural language query, the already identified main query body (intent, 
                                       ) -> List[tuple[str, str]]:
         class_list_str = ", ".join(available_classes) if available_classes else "No available class information provided."
 
-        user_content = f"Please analyze the following query and convert it into the NormalizedQueryBody JSON format:\nQuery: {query}"
+        user_content = (
+            "Please analyze the following query and decide the values for the "
+            "fields of the NormalizedQueryBody schema (intent, relevant_entities, "
+            "filters, query_type_suggestion).\n"
+            f"Query: {query}"
+        )
 
         if enhanced_feedback:
             print(f"Enhanced Feedback Got ")
@@ -355,7 +359,6 @@ Please consider these hints when selecting relevant_entities. Try to choose diff
             print(f"[DEBUG-CLASS-HINTS] class_hints is falsy")
 
         user_content += f"\n\nAvailable classes: {class_list_str}"
-        user_content += "\n\nOutput *only* the JSON object conforming to the NormalizedQueryBody schema."
         
         return [
             ("system", self.system_prompt_main_body),

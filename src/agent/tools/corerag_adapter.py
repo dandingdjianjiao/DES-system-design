@@ -46,13 +46,34 @@ if 'OPENAI_API_KEY' not in os.environ:
 
 logger = logging.getLogger(__name__)
 
-# Avoid conflict with web_backend.config (module) which would shadow corerag/config namespace
-existing_config = sys.modules.get("config")
-if existing_config:
-    cfg_file = getattr(existing_config, "__file__", "")
-    if cfg_file and "web_backend/config.py" in cfg_file.replace("\\", "/"):
-        sys.modules.pop("config", None)
-        sys.modules.pop("config.settings", None)
+# Prepare a dedicated `config` package for CoreRAG so that
+# `from config.settings import ...` in corerag code always resolves
+# to /app/src/tools/corerag/config/settings.py, even if there is a
+# top-level config.py elsewhere (e.g., web_backend/config.py).
+import importlib, importlib.util, types
+
+# Remove any pre-loaded top-level `config` module
+sys.modules.pop("config", None)
+sys.modules.pop("config.settings", None)
+
+try:
+    config_dir = corerag_path / "config"
+    settings_path = config_dir / "settings.py"
+
+    # Create a lightweight package module for `config`
+    config_pkg = types.ModuleType("config")
+    config_pkg.__path__ = [str(config_dir)]
+    sys.modules["config"] = config_pkg
+
+    # Load settings.py explicitly as `config.settings`
+    spec = importlib.util.spec_from_file_location("config.settings", settings_path)
+    settings_mod = importlib.util.module_from_spec(spec)
+    sys.modules["config.settings"] = settings_mod
+    assert spec.loader is not None
+    spec.loader.exec_module(settings_mod)
+except Exception:
+    # Any failure here will be surfaced by the subsequent import below
+    pass
 
 # Import CoreRAG components
 try:
