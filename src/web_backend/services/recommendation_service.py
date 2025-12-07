@@ -294,7 +294,8 @@ class RecommendationService:
 
             trajectory = Trajectory(
                 steps=trajectory_steps,
-                tool_calls=rec.trajectory.metadata.get("tool_calls", [])
+                tool_calls=rec.trajectory.metadata.get("tool_calls", []),
+                metadata=rec.trajectory.metadata or {}
             )
 
             # Convert experiment result if exists
@@ -303,8 +304,8 @@ class RecommendationService:
                 exp = rec.experiment_result
                 experiment_result = ExperimentResultData(
                     is_liquid_formed=exp.is_liquid_formed,
-                    solubility=exp.solubility,
-                    solubility_unit=exp.solubility_unit,
+                    measurements=exp.measurements,
+                    conditions=exp.conditions,
                     properties=exp.properties,
                     experimenter=exp.experimenter,
                     experiment_date=exp.experiment_date,

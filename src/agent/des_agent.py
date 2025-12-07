@@ -151,9 +151,15 @@ class DESAgent:
         if knowledge_state['memories'] and len(knowledge_state['memories']) > 0:
             memory_summary = "\n**Retrieved Memories Summary**:\n"
             for i, mem in enumerate(knowledge_state['memories'][:3], 1):
-                solubility = mem.metadata.get('solubility', 'N/A')
-                sol_unit = mem.metadata.get('solubility_unit', '')
-                memory_summary += f"  {i}. {mem.title[:80]}... (溶解度: {solubility} {sol_unit})\n"
+                measurements = mem.metadata.get("measurements", [])
+                max_eff = None
+                unit = ""
+                for m in measurements:
+                    if m.get("leaching_efficiency") is not None:
+                        max_eff = m.get("leaching_efficiency") if max_eff is None else max(max_eff, m.get("leaching_efficiency"))
+                        unit = m.get("unit", unit)
+                eff_text = f"浸出效率≈{max_eff} {unit}" if max_eff is not None else "无浸出数据"
+                memory_summary += f"  {i}. {mem.title[:80]}... ({eff_text})\n"
             if len(knowledge_state['memories']) > 3:
                 memory_summary += f"  ... and {len(knowledge_state['memories']) - 3} more\n"
 
@@ -1284,23 +1290,16 @@ Format your response as JSON:
             Dict with processing results:
                 - status: "success" or "error"
                 - recommendation_id: The updated recommendation ID
-                - solubility: Measured solubility value
-                - solubility_unit: Unit of solubility
+                - measurement_count: Number of measurement rows processed
                 - is_liquid_formed: Whether DES liquid formed
                 - memories_extracted: List of extracted memory titles
                 - message: Human-readable status message
 
         Example:
-            >>> exp_result = ExperimentResult(
-            ...     is_liquid_formed=True,
-            ...     solubility=6.5,
-            ...     solubility_unit="g/L",
-            ...     properties={"viscosity": "45 cP"},
-            ...     notes="Clear liquid formed at room temperature"
-            ... )
-            >>> result = agent.submit_experiment_feedback("REC_20250116_task_001", exp_result)
-            >>> print(f"Solubility: {result['solubility']} {result['solubility_unit']}")
-            >>> print(f"Extracted {len(result['memories_extracted'])} new memories")
+            Typical usage:
+                - Prepare ExperimentResult with measurements list
+                - Call submit_experiment_feedback(rec_id, experiment_result)
+                - Inspect returned measurement_count / memories_extracted
         """
         logger.info(f"Processing experimental feedback for recommendation {recommendation_id}")
 
@@ -1325,15 +1324,11 @@ Format your response as JSON:
                 is_update=is_update
             )
 
-            # Log using raw solubility instead of performance_score
-            solubility_str = (
-                f"{process_result['solubility']} {process_result['solubility_unit']}"
-                if process_result.get('solubility') is not None
-                else "N/A"
-            )
+            # Log using measurement count
+            solubility_str = f"measurements={process_result.get('measurement_count', 0)}"
             logger.info(
                 f"Feedback processing completed: {process_result['num_memories']} "
-                f"memories extracted (solubility: {solubility_str})"
+                f"memories extracted ({solubility_str})"
             )
 
             # Auto-save if configured
@@ -1342,14 +1337,10 @@ Format your response as JSON:
                 self.memory.save(save_path)
                 logger.info(f"Auto-saved memory bank to {save_path}")
 
-            # Build message using raw solubility
-            solubility_str = (
-                f"{process_result['solubility']} {process_result['solubility_unit']}"
-                if process_result.get('solubility') is not None
-                else "N/A (DES not formed)"
+            message = (
+                f"Experimental feedback processed successfully. "
+                f"Measurements: {process_result.get('measurement_count', 0)}. "
             )
-
-            message = f"Experimental feedback processed successfully. Solubility: {solubility_str}. "
             if is_update:
                 deleted = process_result.get("deleted_memories", 0)
                 message += f"Updated feedback (deleted {deleted} old memories). "
@@ -1358,10 +1349,9 @@ Format your response as JSON:
             return {
                 "status": "success",
                 "recommendation_id": recommendation_id,
-                "solubility": process_result.get("solubility"),
-                "solubility_unit": process_result.get("solubility_unit"),
                 "is_liquid_formed": process_result.get("is_liquid_formed"),
                 "memories_extracted": process_result["memories_extracted"],
+                "measurement_count": process_result.get("measurement_count", 0),
                 "is_update": is_update,
                 "deleted_memories": process_result.get("deleted_memories", 0) if is_update else None,
                 "message": message

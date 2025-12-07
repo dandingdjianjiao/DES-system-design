@@ -18,6 +18,7 @@ from models.schemas import (
 )
 from services.feedback_service import get_feedback_service
 from utils.response import error_response
+from utils.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -50,17 +51,13 @@ async def submit_feedback(feedback_request: FeedbackRequest):
     **Required fields**:
     - recommendation_id: ID of the recommendation to update
     - experiment_result.is_liquid_formed: Whether DES formed liquid phase
-    - experiment_result.solubility: Solubility (required if liquid formed)
+    - experiment_result.measurements: Long-table rows (target_material, time_h, leaching_efficiency, unit, observation)
 
-    **Optional fields**:
-    - experiment_result.properties: Additional measurements (dict)
-    - experiment_result.experimenter: Who performed the experiment
-    - experiment_result.notes: Experimental notes
-
-    **Validation rules**:
-    - If is_liquid_formed=True, solubility MUST be provided
-    - If is_liquid_formed=False, solubility should be None/0
-    - Solubility must be non-negative
+    **Validation rules (enforced in service)**:
+    - At least one measurement row
+    - If is_liquid_formed=True: at least one row with leaching_efficiency
+    - If is_liquid_formed=False: no leaching_efficiency values allowed
+    - time_h >= 0, leaching_efficiency >= 0, unit required per row
 
     **Example request**:
     ```json
@@ -68,8 +65,15 @@ async def submit_feedback(feedback_request: FeedbackRequest):
       "recommendation_id": "REC_20251016_123456_task_001",
       "experiment_result": {
         "is_liquid_formed": true,
-        "solubility": 6.5,
-        "solubility_unit": "g/L",
+        "conditions": {
+          "temperature_C": 25,
+          "solid_liquid_ratio": { "solid_mass_g": 1.0, "liquid_volume_ml": 10.0 }
+        },
+        "measurements": [
+          {"target_material": "Fe", "time_h": 1, "leaching_efficiency": 20, "unit": "%"},
+          {"target_material": "Fe", "time_h": 3, "leaching_efficiency": 35, "unit": "%"},
+          {"target_material": "Co", "time_h": 3, "leaching_efficiency": 5, "unit": "%"}
+        ],
         "properties": {
           "viscosity": "45 cP",
           "density": "1.15 g/mL",
@@ -106,9 +110,9 @@ async def submit_feedback(feedback_request: FeedbackRequest):
             message=result.get("message", "Feedback accepted and processing in background")
         )
 
-    except ValueError as e:
+    except ValidationException as e:
         # Validation error or not found
-        error_msg = str(e)
+        error_msg = e.message
         if "not found" in error_msg.lower():
             logger.warning(f"Recommendation not found: {feedback_request.recommendation_id}")
             raise HTTPException(
@@ -118,8 +122,12 @@ async def submit_feedback(feedback_request: FeedbackRequest):
         else:
             logger.warning(f"Validation error: {error_msg}")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_response(message=error_msg)
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=error_response(
+                    message=error_msg,
+                    field=getattr(e, "field", None),
+                    index=getattr(e, "index", None)
+                )
             )
 
     except RuntimeError as e:
@@ -181,8 +189,8 @@ async def get_feedback_status(recommendation_id: str):
         "completed_at": "2025-10-20T14:30:45",
         "result": {
           "recommendation_id": "REC_...",
-          "solubility": 6.5,
-          "solubility_unit": "g/L",
+          "is_liquid_formed": true,
+          "measurement_count": 10,
           "memories_extracted": ["Memory 1", "Memory 2"],
           "num_memories": 2,
           "is_update": false,
@@ -208,11 +216,11 @@ async def get_feedback_status(recommendation_id: str):
             result_data = status_data["result"]
             result = FeedbackData(
                 recommendation_id=recommendation_id,
-                solubility=result_data.get("solubility"),
-                solubility_unit=result_data.get("solubility_unit", "g/L"),
                 is_liquid_formed=result_data.get("is_liquid_formed"),
+                measurement_count=result_data.get("measurement_count", 0),
                 memories_extracted=result_data.get("memories_extracted", []),
-                num_memories=result_data.get("num_memories", 0)
+                num_memories=result_data.get("num_memories", 0),
+                experiment_summary_text=result_data.get("experiment_summary_text")
             )
 
         return FeedbackStatusResponse(

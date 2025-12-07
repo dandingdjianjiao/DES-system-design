@@ -5,15 +5,17 @@ Business logic for generating system statistics and performance analytics.
 """
 
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
+import statistics
 
 from models.schemas import (
     StatisticsData,
     SummaryStatistics,
     PerformanceTrendPoint,
-    TopFormulation
+    TopFormulation,
+    TargetMaterialStats,
 )
 from utils.agent_loader import get_rec_manager
 
@@ -37,7 +39,7 @@ class StatisticsService:
         Raises:
             RuntimeError: If statistics generation fails
         """
-        logger.info("Generating system statistics")
+        logger.info("Generating system statistics (leaching-efficiency based)")
 
         try:
             # Get all recommendations
@@ -59,18 +61,22 @@ class StatisticsService:
             # Calculate top formulations
             top_formulations = self._calculate_top_formulations(all_recs)
 
+            # Calculate target-material stats
+            target_material_stats = self._calculate_target_material_stats(all_recs)
+
             # Build statistics data
             stats_data = StatisticsData(
                 summary=summary,
                 by_material=by_material,
                 by_status=by_status,
                 performance_trend=performance_trend,
-                top_formulations=top_formulations
+                top_formulations=top_formulations,
+                target_material_stats=target_material_stats,
             )
 
             logger.info(
                 f"Statistics generated: {summary.total_recommendations} total recommendations, "
-                f"avg performance: {summary.average_performance_score:.2f}"
+                f"mean max leaching eff: {summary.max_leaching_efficiency_mean}"
             )
 
             return stats_data
@@ -132,37 +138,41 @@ class StatisticsService:
             raise RuntimeError(f"Failed to calculate performance trend: {str(e)}")
 
     def _calculate_summary(self, all_recs: List[Any]) -> SummaryStatistics:
-        """Calculate summary statistics"""
+        """Calculate summary statistics using leaching efficiency"""
         total = len(all_recs)
         pending = sum(1 for rec in all_recs if rec.status == "PENDING")
         completed = sum(1 for rec in all_recs if rec.status == "COMPLETED")
         cancelled = sum(1 for rec in all_recs if rec.status == "CANCELLED")
 
-        # Calculate average performance score (only for completed)
+        # Completed with experiment result
         completed_recs = [rec for rec in all_recs if rec.status == "COMPLETED" and rec.experiment_result]
-        if completed_recs:
-            avg_performance = sum(
-                rec.experiment_result.get_performance_score()
-                for rec in completed_recs
-            ) / len(completed_recs)
+        max_effs: List[float] = []
+        liquid_formed_count = 0
+        measurement_rows = []
+        for rec in completed_recs:
+            exp = rec.experiment_result
+            if exp.is_liquid_formed:
+                liquid_formed_count += 1
+            measurements = getattr(exp, "measurements", []) or []
+            measurement_rows.append(len(measurements))
+            max_eff = self._get_max_eff(measurements)
+            if max_eff is not None:
+                max_effs.append(max_eff)
 
-            # Calculate liquid formation rate
-            liquid_formed_count = sum(
-                1 for rec in completed_recs
-                if rec.experiment_result.is_liquid_formed
-            )
-            liquid_formation_rate = liquid_formed_count / len(completed_recs)
-        else:
-            avg_performance = 0.0
-            liquid_formation_rate = 0.0
+        liquid_formation_rate = (liquid_formed_count / len(completed_recs)) if completed_recs else 0.0
+        max_eff_mean = statistics.mean(max_effs) if max_effs else None
+        max_eff_median = statistics.median(max_effs) if max_effs else None
+        measurement_rows_mean = statistics.mean(measurement_rows) if measurement_rows else None
 
         return SummaryStatistics(
             total_recommendations=total,
             pending_experiments=pending,
             completed_experiments=completed,
             cancelled=cancelled,
-            average_performance_score=avg_performance,
-            liquid_formation_rate=liquid_formation_rate
+            liquid_formation_rate=liquid_formation_rate,
+            max_leaching_efficiency_mean=max_eff_mean,
+            max_leaching_efficiency_median=max_eff_median,
+            measurement_rows_mean=measurement_rows_mean,
         )
 
     def _calculate_by_material(self, all_recs: List[Any]) -> Dict[str, int]:
@@ -181,125 +191,134 @@ class StatisticsService:
         return dict(by_status)
 
     def _calculate_performance_trend(self, all_recs: List[Any]) -> List[PerformanceTrendPoint]:
-        """Calculate performance trend by date"""
-        # Group by date
+        """Calculate performance trend by date (leaching efficiency based)"""
         by_date = defaultdict(list)
         for rec in all_recs:
             if rec.status == "COMPLETED" and rec.experiment_result:
-                # Extract date (YYYY-MM-DD)
                 date_str = rec.created_at[:10]
                 by_date[date_str].append(rec)
 
-        # Calculate statistics for each date
-        trend_points = []
+        trend_points: List[PerformanceTrendPoint] = []
         for date_str in sorted(by_date.keys()):
             recs = by_date[date_str]
+            max_effs = []
+            liquid_formed_count = 0
+            for rec in recs:
+                exp = rec.experiment_result
+                if exp.is_liquid_formed:
+                    liquid_formed_count += 1
+                max_eff = self._get_max_eff(getattr(exp, "measurements", []) or [])
+                if max_eff is not None:
+                    max_effs.append(max_eff)
 
-            # Calculate averages
-            solubilities = [
-                rec.experiment_result.solubility
-                for rec in recs
-                if rec.experiment_result.solubility is not None
-            ]
-            avg_solubility = sum(solubilities) / len(solubilities) if solubilities else 0.0
-
-            # Determine most common solubility unit
-            units = [
-                rec.experiment_result.solubility_unit
-                for rec in recs
-                if rec.experiment_result.solubility is not None
-            ]
-            # Use most common unit, default to "g/L"
-            common_unit = max(set(units), key=units.count) if units else "g/L"
-
-            performances = [
-                rec.experiment_result.get_performance_score()
-                for rec in recs
-            ]
-            avg_performance = sum(performances) / len(performances) if performances else 0.0
-
-            liquid_formed_count = sum(
-                1 for rec in recs
-                if rec.experiment_result.is_liquid_formed
-            )
+            max_mean = statistics.mean(max_effs) if max_effs else None
+            max_median = statistics.median(max_effs) if max_effs else None
             liquid_formation_rate = liquid_formed_count / len(recs) if recs else 0.0
 
-            trend_point = PerformanceTrendPoint(
-                date=date_str,
-                avg_solubility=avg_solubility,
-                solubility_unit=common_unit,
-                avg_performance_score=avg_performance,
-                experiment_count=len(recs),
-                liquid_formation_rate=liquid_formation_rate
+            trend_points.append(
+                PerformanceTrendPoint(
+                    date=date_str,
+                    max_leaching_efficiency_mean=max_mean,
+                    max_leaching_efficiency_median=max_median,
+                    experiment_count=len(recs),
+                    liquid_formation_rate=liquid_formation_rate,
+                )
             )
-            trend_points.append(trend_point)
 
         return trend_points
 
     def _calculate_top_formulations(self, all_recs: List[Any]) -> List[TopFormulation]:
-        """Calculate top performing formulations"""
-        # Group by formulation string
+        """Top formulations ranked by mean max leaching efficiency"""
         by_formulation = defaultdict(list)
         for rec in all_recs:
             if rec.status == "COMPLETED" and rec.experiment_result:
-                # Build formulation string using the same logic as RecommendationManager
                 f = rec.formulation
                 if "components" in f and f.get("components"):
-                    # Multi-component formulation
                     names = [c.get("name", "Unknown") for c in f["components"]]
                     molar_ratio = f.get("molar_ratio", "?")
                     formulation_str = f"{' + '.join(names)} ({molar_ratio})"
                 else:
-                    # Binary formulation
                     hbd = f.get("HBD", "?")
                     hba = f.get("HBA", "?")
                     molar_ratio = f.get("molar_ratio", "?")
                     formulation_str = f"{hbd} : {hba} ({molar_ratio})"
                 by_formulation[formulation_str].append(rec)
 
-        # Calculate average solubility for each formulation
         formulation_stats = []
         for formulation_str, recs in by_formulation.items():
-            # Use average solubility instead of performance score
-            solubilities = [
-                rec.experiment_result.solubility
-                for rec in recs
-                if rec.experiment_result.solubility is not None
-            ]
-            avg_solubility = sum(solubilities) / len(solubilities) if solubilities else 0.0
+            max_effs = []
+            for rec in recs:
+                max_eff = self._get_max_eff(getattr(rec.experiment_result, "measurements", []) or [])
+                if max_eff is not None:
+                    max_effs.append(max_eff)
+            avg_max = statistics.mean(max_effs) if max_effs else None
+            formulation_stats.append((formulation_str, avg_max, len(recs)))
 
-            # Determine most common solubility unit
-            units = [
-                rec.experiment_result.solubility_unit
-                for rec in recs
-                if rec.experiment_result.solubility is not None
-            ]
-            common_unit = max(set(units), key=units.count) if units else "g/L"
-
-            formulation_stats.append((
-                formulation_str,
-                avg_solubility,
-                common_unit,
-                len(recs)
-            ))
-
-        # Sort by average solubility (descending) and take top 10
-        formulation_stats.sort(key=lambda x: x[1], reverse=True)
+        formulation_stats.sort(key=lambda x: (x[1] is not None, x[1] or -1), reverse=True)
         top_10 = formulation_stats[:10]
 
-        # Build TopFormulation objects
-        # Note: avg_performance field name kept for API compatibility, but contains avg solubility
-        top_formulations = [
+        return [
             TopFormulation(
                 formulation=f_str,
-                avg_performance=avg_sol,  # Contains avg solubility (API field name kept for compatibility)
-                solubility_unit=unit,
+                avg_max_leaching_efficiency=avg_max,
                 success_count=count
             )
-            for f_str, avg_sol, unit, count in top_10
+            for f_str, avg_max, count in top_10
         ]
 
-        return top_formulations
+    def _calculate_target_material_stats(self, all_recs: List[Any]) -> List[TargetMaterialStats]:
+        """Grouped leaching statistics by target material"""
+        grouped = defaultdict(list)
+        for rec in all_recs:
+            if rec.status == "COMPLETED" and rec.experiment_result:
+                target = rec.task.get("target_material", "unknown")
+                grouped[target].append(rec)
+
+        stats_list: List[TargetMaterialStats] = []
+        for target, recs in grouped.items():
+            liquid_formed = 0
+            max_effs = []
+            measurement_rows = []
+            for rec in recs:
+                exp = rec.experiment_result
+                if exp.is_liquid_formed:
+                    liquid_formed += 1
+                measurements = getattr(exp, "measurements", []) or []
+                measurement_rows.append(len(measurements))
+                max_eff = self._get_max_eff(measurements)
+                if max_eff is not None:
+                    max_effs.append(max_eff)
+
+            formation_rate = liquid_formed / len(recs) if recs else 0.0
+            mean_eff = statistics.mean(max_effs) if max_effs else None
+            median_eff = statistics.median(max_effs) if max_effs else None
+            p90_eff = statistics.quantiles(max_effs, n=10)[8] if len(max_effs) >= 10 else (max(max_effs) if max_effs else None)
+            measurement_rows_mean = statistics.mean(measurement_rows) if measurement_rows else None
+
+            stats_list.append(
+                TargetMaterialStats(
+                    target_material=target,
+                    experiments_total=len(recs),
+                    liquid_formation_rate=formation_rate,
+                    max_leaching_efficiency_mean=mean_eff,
+                    max_leaching_efficiency_median=median_eff,
+                    max_leaching_efficiency_p90=p90_eff,
+                    measurement_rows_mean=measurement_rows_mean,
+                )
+            )
+
+        # Sort by mean max leaching efficiency descending, then experiments count
+        stats_list.sort(key=lambda s: (s.max_leaching_efficiency_mean is not None, s.max_leaching_efficiency_mean or -1, s.experiments_total), reverse=True)
+        return stats_list
+
+    @staticmethod
+    def _get_max_eff(measurements: List[Dict[str, Any]]) -> Optional[float]:
+        vals = [
+            m.get("leaching_efficiency")
+            for m in measurements
+            if m.get("leaching_efficiency") is not None
+        ]
+        return max(vals) if vals else None
 
 
 # Singleton instance

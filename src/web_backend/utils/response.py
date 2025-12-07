@@ -34,7 +34,9 @@ def success_response(
 def error_response(
     message: str,
     errors: Optional[List[Dict[str, str]]] = None,
-    status_code: int = 400
+    status_code: int = 400,
+    field: Optional[str] = None,
+    index: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Create an error response.
@@ -47,13 +49,26 @@ def error_response(
     Returns:
         Dict with status="error" and error details
     """
-    response = {
+    response: Dict[str, Any] = {
         "status": "error",
         "message": message
     }
+
+    # Primary field/index (single error)
+    if field is not None:
+        response["field"] = field
+    if index is not None:
+        response["index"] = index
+
+    # Optional structured errors list
     if errors:
+        # Preserve any extra keys such as index
         response["errors"] = [
-            {"field": e.get("field", "unknown"), "message": e.get("message", "")}
+            {
+                "field": e.get("field", "unknown"),
+                "message": e.get("message", ""),
+                **({"index": e.get("index")} if "index" in e else {})
+            }
             for e in errors
         ]
     return response

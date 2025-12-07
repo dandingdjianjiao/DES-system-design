@@ -22,7 +22,7 @@ import {
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { statisticsService } from '../services';
-import type { StatisticsData, PerformanceTrendPoint, TopFormulation } from '../types';
+import type { StatisticsData, PerformanceTrendPoint } from '../types';
 
 const { Title, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -96,14 +96,22 @@ function StatisticsPage() {
         a.experiment_count - b.experiment_count,
     },
     {
-      title: '平均溶解度',
-      dataIndex: 'avg_solubility',
-      key: 'avg_solubility',
-      render: (val: number, record: PerformanceTrendPoint) => (
-        <Tag color="blue">{val.toFixed(2)} {record.solubility_unit}</Tag>
-      ),
+      title: '最大浸出效率均值 (%)',
+      dataIndex: 'max_leaching_efficiency_mean',
+      key: 'max_leaching_efficiency_mean',
+      render: (val?: number) =>
+        val !== undefined && val !== null ? <Tag color="blue">{val.toFixed(2)}%</Tag> : <Tag>--</Tag>,
       sorter: (a: PerformanceTrendPoint, b: PerformanceTrendPoint) =>
-        a.avg_solubility - b.avg_solubility,
+        (a.max_leaching_efficiency_mean || 0) - (b.max_leaching_efficiency_mean || 0),
+    },
+    {
+      title: '最大浸出效率中位数 (%)',
+      dataIndex: 'max_leaching_efficiency_median',
+      key: 'max_leaching_efficiency_median',
+      render: (val?: number) =>
+        val !== undefined && val !== null ? <Tag>{val.toFixed(2)}%</Tag> : <Tag>--</Tag>,
+      sorter: (a: PerformanceTrendPoint, b: PerformanceTrendPoint) =>
+        (a.max_leaching_efficiency_median || 0) - (b.max_leaching_efficiency_median || 0),
     },
     {
       title: '液体形成率',
@@ -130,18 +138,27 @@ function StatisticsPage() {
       render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
     },
     {
-      title: '平均溶解度',
-      dataIndex: 'avg_performance',
-      key: 'avg_performance',
-      render: (val: number, record: TopFormulation) => (
-        <Tag color="blue">{val.toFixed(2)} {record.solubility_unit}</Tag>
-      ),
+      title: '平均最大浸出效率 (%)',
+      dataIndex: 'avg_max_leaching_efficiency',
+      key: 'avg_max_leaching_efficiency',
+      render: (val?: number) =>
+        val !== undefined && val !== null ? <Tag color="blue">{val.toFixed(2)}%</Tag> : <Tag>--</Tag>,
     },
     {
       title: '成功次数',
       dataIndex: 'success_count',
       key: 'success_count',
     },
+  ];
+
+  const targetMaterialColumns = [
+    { title: '目标物质', dataIndex: 'target_material', key: 'target_material' },
+    { title: '实验数', dataIndex: 'experiments_total', key: 'experiments_total', sorter: (a: any, b: any) => a.experiments_total - b.experiments_total },
+    { title: '形成率', dataIndex: 'liquid_formation_rate', key: 'liquid_formation_rate', render: (v: number) => `${(v * 100).toFixed(1)}%`, sorter: (a: any, b: any) => a.liquid_formation_rate - b.liquid_formation_rate },
+    { title: '最大浸出效率均值 (%)', dataIndex: 'max_leaching_efficiency_mean', key: 'max_leaching_efficiency_mean', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_mean || 0) - (b.max_leaching_efficiency_mean || 0) },
+    { title: '最大浸出效率中位数 (%)', dataIndex: 'max_leaching_efficiency_median', key: 'max_leaching_efficiency_median', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_median || 0) - (b.max_leaching_efficiency_median || 0) },
+    { title: '最大浸出效率 P90 (%)', dataIndex: 'max_leaching_efficiency_p90', key: 'max_leaching_efficiency_p90', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_p90 || 0) - (b.max_leaching_efficiency_p90 || 0) },
+    { title: '平均测量条数', dataIndex: 'measurement_rows_mean', key: 'measurement_rows_mean', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.measurement_rows_mean || 0) - (b.measurement_rows_mean || 0) },
   ];
 
   return (
@@ -206,6 +223,52 @@ function StatisticsPage() {
             />
           </Card>
         </Col>
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="最大浸出效率均值"
+              value={
+                statistics.summary.max_leaching_efficiency_mean !== undefined &&
+                statistics.summary.max_leaching_efficiency_mean !== null
+                  ? statistics.summary.max_leaching_efficiency_mean.toFixed(2)
+                  : '--'
+              }
+              suffix="%"
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="最大浸出效率中位数"
+              value={
+                statistics.summary.max_leaching_efficiency_median !== undefined &&
+                statistics.summary.max_leaching_efficiency_median !== null
+                  ? statistics.summary.max_leaching_efficiency_median.toFixed(2)
+                  : '--'
+              }
+              suffix="%"
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="平均测量条数"
+              value={
+                statistics.summary.measurement_rows_mean !== undefined &&
+                statistics.summary.measurement_rows_mean !== null
+                  ? statistics.summary.measurement_rows_mean.toFixed(2)
+                  : '--'
+              }
+            />
+          </Card>
+        </Col>
       </Row>
 
       {/* By Material and By Status */}
@@ -259,6 +322,19 @@ function StatisticsPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* Target material stats */}
+      <Card
+        title="按目标物质统计（浸出效率）"
+        style={{ marginBottom: 24 }}
+      >
+        <Table
+          columns={targetMaterialColumns}
+          dataSource={statistics.target_material_stats || []}
+          rowKey="target_material"
+          pagination={{ pageSize: 10 }}
+        />
+      </Card>
 
       {/* Performance Trend */}
       <Card

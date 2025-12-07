@@ -58,10 +58,22 @@ function FeedbackPage() {
         // If already has experiment result, pre-fill the form
         if (response.data.experiment_result) {
           const expResult = response.data.experiment_result;
+          // Prefill conditions and measurements (long-table mode)
+          const expConditions = expResult.conditions || {};
+          const expRatio = expConditions.solid_liquid_ratio || {};
+          const expMeasurements = expResult.measurements || [];
+
           form.setFieldsValue({
             is_liquid_formed: expResult.is_liquid_formed,
-            solubility: expResult.solubility,
-            solubility_unit: expResult.solubility_unit || 'g/L',
+            conditions: {
+              temperature_C: expConditions.temperature_C,
+              solid_liquid_ratio: {
+                solid_mass_g: expRatio.solid_mass_g,
+                liquid_volume_ml: expRatio.liquid_volume_ml,
+                ratio_text: expRatio.ratio_text,
+              },
+            },
+            measurements: expMeasurements.length > 0 ? expMeasurements : undefined,
             notes: expResult.notes || '',
             // Convert properties object to text format
             properties_text: expResult.properties
@@ -69,6 +81,8 @@ function FeedbackPage() {
                   .map(([key, value]) => `${key}=${value}`)
                   .join('\n')
               : '',
+            // Keep raw properties in sync so that updates don't silently wipe old values
+            properties: expResult.properties || undefined,
           });
           setIsLiquidFormed(expResult.is_liquid_formed);
           message.info('已加载当前反馈数据，您可以修改后重新提交');
@@ -85,6 +99,21 @@ function FeedbackPage() {
 
   const handleSubmit = async (values: ExperimentResultRequest) => {
     if (!id) return;
+
+    // Basic validation: require at least one measurement row
+    const measurements = values.measurements || [];
+    if (measurements.length === 0) {
+      message.error('请至少添加一条浸出效率测量记录');
+      return;
+    }
+    // 如果液体形成，要求至少有一条带浸出效率的测量
+    if (values.is_liquid_formed) {
+      const hasSol = measurements.some((m) => m.leaching_efficiency !== undefined && m.leaching_efficiency !== null);
+      if (!hasSol) {
+        message.error('液体形成时，请在测量记录中提供至少一个浸出效率数值');
+        return;
+      }
+    }
 
     setSubmitting(true);
     try {
@@ -141,7 +170,45 @@ function FeedbackPage() {
 
     } catch (error: any) {
       console.error('Failed to submit feedback:', error);
-      message.error(error.response?.data?.message || '提交失败');
+      const data = error?.response?.data;
+      const detail = data?.detail || {};
+      const msg =
+        detail.message ||
+        data?.message ||
+        error?.message ||
+        '提交失败';
+
+      // Optional: map backend field name to form paths
+      const field = detail.field as string | undefined;
+      const index = typeof detail.index === 'number' ? (detail.index as number) : undefined;
+
+      if (field) {
+        let namePath: (string | number)[] | undefined;
+
+        if (field === 'measurements') {
+          // 如果有 index，尽量高亮到该行；否则高亮整个列表
+          namePath = index !== undefined ? ['measurements', index] : ['measurements'];
+        } else if (field === 'time_h') {
+          namePath = index !== undefined ? ['measurements', index, 'time_h'] : ['measurements'];
+        } else if (field === 'leaching_efficiency') {
+          namePath = index !== undefined ? ['measurements', index, 'leaching_efficiency'] : ['measurements'];
+        } else if (field === 'unit') {
+          namePath = index !== undefined ? ['measurements', index, 'unit'] : ['measurements'];
+        } else if (field === 'recommendation_id') {
+          namePath = ['recommendation_id'];
+        }
+
+        if (namePath) {
+          form.setFields([
+            {
+              name: namePath as any,
+              errors: [msg],
+            },
+          ]);
+        }
+      }
+
+      message.error(msg);
       setSubmitting(false);
     }
   };
@@ -218,11 +285,11 @@ function FeedbackPage() {
                 <div>
                   <Paragraph>
                     {processingStatus.result.is_liquid_formed
-                      ? `溶解度: ${processingStatus.result.solubility} ${processingStatus.result.solubility_unit}`
+                      ? 'DES液体成功形成'
                       : 'DES液体未成功形成'}
                   </Paragraph>
                   <Paragraph>
-                    提取了 <Text strong>{processingStatus.result.num_memories}</Text> 条记忆
+                    已处理测量 <Text strong>{processingStatus.result.measurement_count ?? 0}</Text> 条，提取了 <Text strong>{processingStatus.result.num_memories}</Text> 条记忆
                   </Paragraph>
                   {processingStatus.is_update && processingStatus.deleted_memories !== undefined && processingStatus.deleted_memories > 0 && (
                     <Alert
@@ -303,9 +370,9 @@ function FeedbackPage() {
                 description={
                   <div>
                     <div>液体形成：{detail.experiment_result.is_liquid_formed ? '是' : '否'}</div>
-                    {detail.experiment_result.solubility && (
-                      <div>溶解度：{detail.experiment_result.solubility} {detail.experiment_result.solubility_unit}</div>
-                    )}
+            {detail.experiment_result.measurements && detail.experiment_result.measurements.length > 0 && (
+              <div>已提交测量：{detail.experiment_result.measurements.length} 条</div>
+            )}
                   </div>
                 }
                 showIcon
@@ -337,7 +404,10 @@ function FeedbackPage() {
           onFinish={handleSubmit}
           initialValues={{
             is_liquid_formed: true,
-            solubility_unit: 'g/L',
+            conditions: { temperature_C: undefined, solid_liquid_ratio: { ratio_text: '1:10 g:mL' } },
+            measurements: [
+              { target_material: detail.task?.target_material, time_h: 1, unit: '%' }
+            ],
           }}
         >
           <Form.Item
@@ -361,46 +431,102 @@ function FeedbackPage() {
             />
           )}
 
-          {isLiquidFormed && (
-            <>
-              <Form.Item
-                label="溶解度"
-                name="solubility"
-                rules={[
-                  {
-                    required: isLiquidFormed,
-                    message: '液体形成时必须填写溶解度',
-                  },
-                  { type: 'number', min: 0, message: '溶解度必须为正数' },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  step={0.1}
-                  placeholder="例如: 8.5"
-                  addonAfter={
-                    <Form.Item name="solubility_unit" noStyle>
-                      <Input style={{ width: 80 }} placeholder="g/L" />
-                    </Form.Item>
-                  }
-                />
-              </Form.Item>
-            </>
-          )}
-
-          <Form.Item
-            label="实验温度 (°C)"
-            name="temperature"
-          >
+          <Divider orientation="left">实验条件</Divider>
+          <Form.Item label="实验温度 (°C)" name={['conditions', 'temperature_C']}>
             <InputNumber
               style={{ width: '100%' }}
               min={-80}
-              max={150}
+              max={200}
               step={0.1}
-              placeholder="实际实验温度"
+              placeholder="例如: 25"
             />
           </Form.Item>
+          <Space size="small" align="start">
+            <Form.Item label="固体质量 (g)" name={['conditions', 'solid_liquid_ratio', 'solid_mass_g']}>
+              <InputNumber min={0} step={0.1} placeholder="例如 1.0" />
+            </Form.Item>
+            <Form.Item label="液体质量 (g)" name={['conditions', 'solid_liquid_ratio', 'liquid_volume_ml']}>
+              <InputNumber min={0} step={0.1} placeholder="例如 10.0" />
+            </Form.Item>
+            <Form.Item label="固液比文本" name={['conditions', 'solid_liquid_ratio', 'ratio_text']}>
+              <Input placeholder="例如 1:10 (g:g)" />
+            </Form.Item>
+          </Space>
+
+          <Divider orientation="left">浸出效率测量（长表模式）</Divider>
+          <Form.List name="measurements">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map((field) => (
+                  <Card key={field.key} type="inner" style={{ marginBottom: 12 }}>
+                    <Space align="baseline" wrap>
+                      <Form.Item
+                        {...field}
+                        label="目标物质"
+                        name={[field.name, 'target_material']}
+                        rules={[{ required: true, message: '请填写目标物质' }]}
+                      >
+                        <Input placeholder="例如 cellulose" style={{ width: 160 }} />
+                      </Form.Item>
+                      <Form.Item
+                        {...field}
+                        label="时间 (h)"
+                        name={[field.name, 'time_h']}
+                        rules={[{ required: true, message: '请填写时间' }]}
+                      >
+                        <InputNumber min={0} step={0.5} style={{ width: 120 }} />
+                      </Form.Item>
+                      <Form.Item
+                        {...field}
+                        label="浸出效率"
+                        name={[field.name, 'leaching_efficiency']}
+                        rules={[{ type: 'number', min: 0, message: '必须为非负数' }]}
+                      >
+                        <InputNumber min={0} step={0.1} style={{ width: 140 }} placeholder="可选" />
+                      </Form.Item>
+                      <Form.Item
+                        {...field}
+                        label="单位"
+                        name={[field.name, 'unit']}
+                      >
+                        <Input style={{ width: 90 }} placeholder="%" />
+                      </Form.Item>
+                      <Form.Item
+                        {...field}
+                        label="观察/备注"
+                        name={[field.name, 'observation']}
+                      >
+                        <Input placeholder="可选" style={{ width: 220 }} />
+                      </Form.Item>
+                      <Button danger type="link" onClick={() => remove(field.name)}>
+                        删除
+                      </Button>
+                    </Space>
+                  </Card>
+                ))}
+                <Button
+                  type="dashed"
+                  onClick={() => {
+                    const existing: any[] = form.getFieldValue('measurements') || [];
+                    const last = existing[existing.length - 1];
+                    const timeSeq = [1, 3, 6, 12, 24];
+                    const nextTime =
+                      last?.time_h !== undefined && last?.time_h !== null
+                        ? (timeSeq.includes(last.time_h) && timeSeq[timeSeq.indexOf(last.time_h) + 1]) || last.time_h + 1
+                        : 1;
+                    add({
+                      target_material: last?.target_material || detail.task?.target_material,
+                      time_h: nextTime || 1,
+                      unit: last?.unit || '%',
+                    });
+                  }}
+                  block
+                >
+                  添加测量
+                </Button>
+              </>
+            )}
+          </Form.List>
 
           <Divider orientation="left">其他性质（可选）</Divider>
 

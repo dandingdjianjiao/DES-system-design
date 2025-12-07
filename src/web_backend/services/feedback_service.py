@@ -11,10 +11,51 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from models.schemas import ExperimentResultRequest, FeedbackData
+from models.schemas import (
+    ExperimentResultRequest,
+    FeedbackData,
+    DissolutionMeasurement,
+    ExperimentConditions,
+)
+from utils.exceptions import ValidationException
 from utils.agent_loader import get_agent, get_rec_manager
 
 logger = logging.getLogger(__name__)
+
+
+def _to_plain(obj: Any) -> Any:
+    """
+    Convert Pydantic models / dataclasses / other objects into plain
+    Python types (dict / list / primitives) so they are JSON-serializable.
+
+    This is mainly used to ensure that the agent-side ExperimentResult
+    dataclass only contains primitive types before we call asdict()/json.dump().
+    """
+    if obj is None:
+        return None
+
+    # Pydantic v2
+    if hasattr(obj, "model_dump"):
+        try:
+            return obj.model_dump()
+        except Exception:
+            pass
+
+    # Pydantic v1 fallback
+    if hasattr(obj, "dict"):
+        try:
+            return obj.dict()
+        except Exception:
+            pass
+
+    if isinstance(obj, dict):
+        return obj
+
+    # Best-effort mapping conversion (for dataclasses / custom types)
+    try:
+        return dict(obj)  # type: ignore[arg-type]
+    except Exception:
+        return obj
 
 
 class FeedbackService:
@@ -63,11 +104,15 @@ class FeedbackService:
             rec = rec_manager.get_recommendation(recommendation_id)
 
             if not rec:
-                raise ValueError(f"Recommendation {recommendation_id} not found")
+                raise ValidationException(
+                    f"Recommendation {recommendation_id} not found",
+                    field="recommendation_id"
+                )
 
             if rec.status == "CANCELLED":
-                raise ValueError(
-                    f"Cannot submit feedback for cancelled recommendation {recommendation_id}"
+                raise ValidationException(
+                    f"Cannot submit feedback for cancelled recommendation {recommendation_id}",
+                    field="recommendation_id"
                 )
 
             if rec.status == "COMPLETED":
@@ -84,9 +129,10 @@ class FeedbackService:
 
             agent_exp_result = ExperimentResult(
                 is_liquid_formed=experiment_result.is_liquid_formed,
-                solubility=experiment_result.solubility,
-                solubility_unit=experiment_result.solubility_unit,
-                properties=experiment_result.properties or {},
+                # Ensure everything passed into the dataclass is plain Python data
+                properties=_to_plain(experiment_result.properties) or {},
+                conditions=_to_plain(experiment_result.conditions) or {},
+                measurements=[_to_plain(m) for m in experiment_result.measurements],
                 experimenter=experiment_result.experimenter,
                 experiment_date=datetime.now().isoformat(),
                 notes=experiment_result.notes
@@ -94,7 +140,7 @@ class FeedbackService:
 
             logger.info(
                 f"Experiment result: liquid_formed={agent_exp_result.is_liquid_formed}, "
-                f"solubility={agent_exp_result.solubility} {agent_exp_result.solubility_unit}"
+                f"measurements={len(agent_exp_result.measurements)}"
             )
 
             # Decide: async or sync processing
@@ -103,7 +149,7 @@ class FeedbackService:
             else:
                 return self._submit_feedback_sync(recommendation_id, agent_exp_result)
 
-        except ValueError as e:
+        except ValidationException as e:
             # Re-raise validation errors
             raise
         except Exception as e:
@@ -119,21 +165,16 @@ class FeedbackService:
         if result["status"] != "success":
             raise RuntimeError(f"Feedback processing failed: {result.get('message')}")
 
-        # Log using raw solubility
-        solubility_str = (
-            f"{result.get('solubility')} {result.get('solubility_unit')}"
-            if result.get('solubility') is not None else "N/A"
-        )
-        logger.info(f"Feedback processed: solubility={solubility_str}, memories={len(result['memories_extracted'])}")
+        logger.info(f"Feedback processed: memories={len(result['memories_extracted'])}")
 
         # Build response data
         return FeedbackData(
             recommendation_id=recommendation_id,
-            solubility=result.get("solubility"),
-            solubility_unit=result.get("solubility_unit"),
             is_liquid_formed=result.get("is_liquid_formed"),
+            measurement_count=result.get("measurement_count", 0),
             memories_extracted=result["memories_extracted"],
-            num_memories=len(result["memories_extracted"])
+            num_memories=len(result["memories_extracted"]),
+            experiment_summary_text=result.get("experiment_summary_text")
         )
 
     def _submit_feedback_async(self, recommendation_id: str, agent_exp_result) -> Dict[str, Any]:
@@ -187,14 +228,14 @@ class FeedbackService:
                     "started_at": self.processing_status[recommendation_id]["started_at"],
                     "completed_at": datetime.now().isoformat(),
                     "result": {
-                        "solubility": result.get("solubility"),
-                        "solubility_unit": result.get("solubility_unit"),
                         "is_liquid_formed": result.get("is_liquid_formed"),
-                        "memories_extracted": result["memories_extracted"],
-                        "num_memories": len(result["memories_extracted"]),
-                        "is_update": result.get("is_update", False),
-                        "deleted_memories": result.get("deleted_memories", 0)
-                    },
+                    "measurement_count": result.get("measurement_count", 0),
+                    "memories_extracted": result["memories_extracted"],
+                    "num_memories": len(result["memories_extracted"]),
+                    "experiment_summary_text": result.get("experiment_summary_text"),
+                    "is_update": result.get("is_update", False),
+                    "deleted_memories": result.get("deleted_memories", 0)
+                },
                     "error": None
                 }
 
@@ -249,30 +290,60 @@ class FeedbackService:
         Raises:
             ValueError: If validation fails
         """
-        # Check: if liquid formed, solubility must be provided
-        if exp_result.is_liquid_formed and exp_result.solubility is None:
-            raise ValueError(
-                "Solubility is required when is_liquid_formed=True"
-            )
+        # Require measurements
+        if not exp_result.measurements or len(exp_result.measurements) == 0:
+            raise ValidationException("At least one measurement is required", field="measurements")
 
-        # Check: if not formed, solubility should be None or 0
-        if not exp_result.is_liquid_formed and exp_result.solubility and exp_result.solubility > 0:
-            logger.warning(
-                "Solubility provided but is_liquid_formed=False. "
-                "Setting solubility to None."
-            )
-            exp_result.solubility = None
-
-        # Validate solubility range
-        if exp_result.solubility is not None:
-            if exp_result.solubility < 0:
-                raise ValueError("Solubility cannot be negative")
-
-            if exp_result.solubility > 1000:
-                logger.warning(
-                    f"Very high solubility value: {exp_result.solubility} {exp_result.solubility_unit}. "
-                    "Please verify this is correct."
+        # If liquid formed: require at least one measurement with leaching_efficiency
+        if exp_result.is_liquid_formed:
+            has_eff = any((m.leaching_efficiency is not None) for m in exp_result.measurements)
+            if not has_eff:
+                raise ValidationException(
+                    "When is_liquid_formed=True, provide at least one measurement.leaching_efficiency",
+                    field="measurements"
                 )
+        else:
+            # If not formed, leaching_efficiency should be absent
+            bad = [
+                (m.target_material, m.time_h)
+                for m in exp_result.measurements
+                if m.leaching_efficiency not in (None, 0)
+            ]
+            if bad:
+                raise ValidationException(
+                    "is_liquid_formed=False but some measurements include leaching_efficiency > 0",
+                    field="measurements"
+                )
+
+        # Basic measurements sanity checks (no silent fixes)
+        seen: set = set()
+        for idx, m in enumerate(exp_result.measurements):
+            if m.time_h is None or m.time_h < 0:
+                raise ValidationException(
+                    "time_h must be provided and non-negative",
+                    field="time_h",
+                    index=idx
+                )
+            if m.leaching_efficiency is not None and m.leaching_efficiency < 0:
+                raise ValidationException(
+                    "leaching_efficiency cannot be negative",
+                    field="leaching_efficiency",
+                    index=idx
+                )
+            if not m.unit:
+                raise ValidationException(
+                    "unit is required for each measurement",
+                    field="unit",
+                    index=idx
+                )
+            key = (m.target_material.strip().lower(), m.time_h)
+            if key in seen:
+                raise ValidationException(
+                    f"Duplicate measurement for target_material={m.target_material}, time_h={m.time_h}",
+                    field="measurements",
+                    index=idx
+                )
+            seen.add(key)
 
 
 # Singleton instance

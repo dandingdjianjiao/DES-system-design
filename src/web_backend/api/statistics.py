@@ -33,16 +33,15 @@ router = APIRouter()
 )
 async def get_statistics():
     """
-    Get comprehensive system statistics.
+    Get comprehensive system statistics (leaching-efficiency based).
 
-    Returns overall system performance metrics including:
-    - **Summary**: Total recommendations, pending/completed/cancelled counts,
-      average performance score, liquid formation success rate
-    - **By Material**: Distribution of recommendations by target material
-    - **By Status**: Distribution of recommendations by status (PENDING/COMPLETED/CANCELLED)
-    - **Performance Trend**: Daily aggregated performance metrics
-      (avg solubility, avg performance score, experiment count, liquid formation rate)
-    - **Top Formulations**: Top 10 performing formulations ranked by average performance score
+    返回内容包含：
+    - **Summary**：推荐数量、形成率、最大浸出效率均值/中位数、平均测量条数
+    - **By Material**：推荐数量的材料分布（计数）
+    - **By Status**：状态分布
+    - **Performance Trend**：按日聚合的形成率与最大浸出效率均值/中位数
+    - **Top Formulations**：按平均最大浸出效率排序的前 10 配方
+    - **Target Material Stats**：按目标物质分组的形成率与浸出效率统计
 
     **Example Response**:
     ```json
@@ -55,8 +54,10 @@ async def get_statistics():
           "pending_experiments": 45,
           "completed_experiments": 95,
           "cancelled": 10,
-          "average_performance_score": 7.2,
-          "liquid_formation_rate": 0.89
+          "liquid_formation_rate": 0.89,
+          "max_leaching_efficiency_mean": 42.1,
+          "max_leaching_efficiency_median": 38.0,
+          "measurement_rows_mean": 5.2
         },
         "by_material": {
           "cellulose": 80,
@@ -71,23 +72,23 @@ async def get_statistics():
         "performance_trend": [
           {
             "date": "2025-10-14",
-            "avg_solubility": 6.8,
-            "avg_performance_score": 7.1,
+            "max_leaching_efficiency_mean": 42.0,
+            "max_leaching_efficiency_median": 38.0,
             "experiment_count": 12,
             "liquid_formation_rate": 0.92
           },
           {
             "date": "2025-10-15",
-            "avg_solubility": 7.3,
-            "avg_performance_score": 7.5,
-            "experiment_count": 15,
-            "liquid_formation_rate": 0.87
-          }
-        ],
+          "max_leaching_efficiency_mean": 55.0,
+          "max_leaching_efficiency_median": 50.0,
+          "experiment_count": 15,
+          "liquid_formation_rate": 0.87
+        }
+      ],
         "top_formulations": [
           {
             "formulation": "Choline chloride:Urea (1:2)",
-            "avg_performance": 8.5,
+            "avg_max_leaching_efficiency": 68.5,
             "success_count": 12
           },
           {
@@ -101,10 +102,8 @@ async def get_statistics():
     ```
 
     **Notes**:
-    - Performance score ranges from 0-10 (based on solubility and liquid formation)
-    - Liquid formation rate is the percentage of experiments that successfully formed liquid DES
-    - Performance trend includes only completed experiments
-    - Top formulations are calculated from completed experiments and ranked by average performance
+    - 全部指标基于浸出效率（%）与是否形成液体
+    - Performance trend / target material stats 仅包含已完成且有实验结果的记录
     """
     try:
         # Get statistics from service
@@ -116,8 +115,7 @@ async def get_statistics():
             status="success",
             message=(
                 f"Statistics retrieved successfully. "
-                f"Total: {stats_data.summary.total_recommendations} recommendations, "
-                f"Avg Performance: {stats_data.summary.average_performance_score:.1f}/10.0"
+                f"Total: {stats_data.summary.total_recommendations} recommendations."
             ),
             data=stats_data
         )
@@ -183,15 +181,15 @@ async def get_performance_trend(
       "data": [
         {
           "date": "2025-10-01",
-          "avg_solubility": 5.8,
-          "avg_performance_score": 6.5,
+          "max_leaching_efficiency_mean": 40.5,
+          "max_leaching_efficiency_median": 38.0,
           "experiment_count": 8,
           "liquid_formation_rate": 0.88
         },
         {
           "date": "2025-10-02",
-          "avg_solubility": 6.2,
-          "avg_performance_score": 6.9,
+          "max_leaching_efficiency_mean": 42.1,
+          "max_leaching_efficiency_median": 41.0,
           "experiment_count": 10,
           "liquid_formation_rate": 0.90
         }

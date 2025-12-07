@@ -16,6 +16,7 @@ import json
 import logging
 
 from .memory import Trajectory, MemoryItem
+from .extractor import format_experiment_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +30,11 @@ class ExperimentResult:
 
     Required Fields:
         is_liquid_formed (bool): Whether the DES components dissolved to form liquid
-        solubility (float): Solubility of target material (only when is_liquid_formed=True)
-        solubility_unit (str): Unit of solubility measurement
 
     Optional Fields:
+        measurements (list): Long-table leaching measurements across targets/timepoints
         properties (dict): User-defined additional measurements (viscosity, density, etc.)
+        conditions (dict): Shared experimental conditions (temperature_C, solid_liquid_ratio)
         experimenter (str): Who performed the experiment
         experiment_date (str): When the experiment was conducted
         notes (str): Experimental notes
@@ -41,11 +42,11 @@ class ExperimentResult:
 
     # ===== Required Fields =====
     is_liquid_formed: bool
-    solubility: Optional[float] = None
-    solubility_unit: str = "g/L"
 
     # ===== Optional Fields =====
     properties: Dict[str, Any] = field(default_factory=dict)
+    conditions: Dict[str, Any] = field(default_factory=dict)
+    measurements: List[Dict[str, Any]] = field(default_factory=list)
 
     # ===== Metadata =====
     experimenter: Optional[str] = None
@@ -54,17 +55,15 @@ class ExperimentResult:
 
     def __post_init__(self):
         """Validate data integrity with boundary case handling"""
-        # Boundary case: If DES not formed, solubility should be None
-        if not self.is_liquid_formed and self.solubility is not None:
-            logger.warning(
-                "Inconsistent data: is_liquid_formed=False but solubility is provided. "
-                "Setting solubility to None."
+        # Require measurements if DES formed
+        if self.is_liquid_formed:
+            has_measurement_eff = any(
+                (m.get("leaching_efficiency") is not None) for m in (self.measurements or [])
             )
-            self.solubility = None
-
-        # If DES formed, solubility must be provided
-        if self.is_liquid_formed and self.solubility is None:
-            raise ValueError("When is_liquid_formed=True, solubility must be provided")
+            if not has_measurement_eff:
+                raise ValueError(
+                    "When is_liquid_formed=True, provide at least one measurement.leaching_efficiency"
+                )
 
     def get_performance_score(self) -> float:
         """
@@ -72,7 +71,7 @@ class ExperimentResult:
 
         Rules:
         - DES not formed: 0.0
-        - DES formed: based on solubility (higher is better)
+        - DES formed: based on leaching efficiency (higher is better)
 
         Returns:
             float: Performance score (0-10)
@@ -80,13 +79,16 @@ class ExperimentResult:
         if not self.is_liquid_formed:
             return 0.0
 
-        # Simple mapping: higher solubility = better
-        # Can be customized based on specific requirements
-        if self.solubility is not None:
-            # Cap at 10.0
-            return min(10.0, self.solubility)
+        # Use max leaching_efficiency across measurements, capped at 10
+        efficiencies = [
+            m.get("leaching_efficiency")
+            for m in (self.measurements or [])
+            if m.get("leaching_efficiency") is not None
+        ]
+        if efficiencies:
+            return min(10.0, max(efficiencies))
 
-        # Default to medium score if no solubility data
+        # Default to medium score if no efficiency data
         return 5.0
 
     def to_dict(self) -> dict:
@@ -562,7 +564,9 @@ class FeedbackProcessor:
 
         # Add experiment data to trajectory metadata
         rec.trajectory.metadata["experiment_result"] = exp_result.to_dict()
-        # Note: performance_score removed - use raw solubility instead
+        exp_summary_text = format_experiment_for_llm(exp_result)
+        rec.trajectory.metadata["experiment_summary_text"] = exp_summary_text
+        # Note: performance_score removed - use raw leaching efficiency instead
         rec.trajectory.metadata["feedback_processed_at"] = datetime.now().isoformat()
         if is_update:
             rec.trajectory.metadata["feedback_updated_at"] = datetime.now().isoformat()
@@ -579,9 +583,9 @@ class FeedbackProcessor:
             memory.metadata["recommendation_id"] = rec_id
             # Key experimental parameters (use raw metrics, not performance_score)
             memory.metadata["is_liquid_formed"] = exp_result.is_liquid_formed
-            memory.metadata["solubility"] = exp_result.solubility
-            memory.metadata["solubility_unit"] = exp_result.solubility_unit
+            memory.metadata["measurements"] = exp_result.measurements
             memory.metadata["experiment_date"] = exp_result.experiment_date
+            memory.metadata["experiment_summary_text"] = exp_summary_text
             if is_update:
                 memory.metadata["is_updated"] = True
 
@@ -604,10 +608,10 @@ class FeedbackProcessor:
         result = {
             "recommendation_id": rec_id,
             "is_liquid_formed": exp_result.is_liquid_formed,
-            "solubility": exp_result.solubility,
-            "solubility_unit": exp_result.solubility_unit,
             "memories_extracted": [m.title for m in new_memories],
             "num_memories": len(new_memories),
+            "measurement_count": len(exp_result.measurements),
+            "experiment_summary_text": exp_summary_text,
         }
 
         if is_update:
@@ -687,8 +691,7 @@ if __name__ == "__main__":
     # Submit feedback
     exp_result = ExperimentResult(
         is_liquid_formed=True,
-        solubility=6.5,
-        solubility_unit="g/L",
+        measurements=[{"target_material": "cellulose", "time_h": 6, "leaching_efficiency": 6.5, "unit": "g/L"}],
         properties={"viscosity": 450},
         experimenter="Dr. Test",
         notes="Good performance",

@@ -86,13 +86,33 @@ export interface TrajectoryStep {
 export interface Trajectory {
   steps: TrajectoryStep[];
   tool_calls: any[];
+  metadata?: Record<string, any>;
+}
+
+export interface SolidLiquidRatio {
+  solid_mass_g?: number;
+  liquid_volume_ml?: number;
+  ratio_text?: string;
+}
+
+export interface ExperimentConditions {
+  temperature_C?: number;
+  solid_liquid_ratio?: SolidLiquidRatio;
+}
+
+export interface DissolutionMeasurement {
+  target_material: string;
+  time_h: number;
+  leaching_efficiency?: number;
+  unit?: string; // default %
+  observation?: string;
 }
 
 export interface ExperimentResult {
   is_liquid_formed: boolean;
-  solubility?: number;
-  solubility_unit: string;
   properties: Record<string, any>;
+  conditions?: ExperimentConditions;
+  measurements?: DissolutionMeasurement[];
   experimenter?: string;
   experiment_date: string;
   notes: string;
@@ -152,9 +172,9 @@ export interface CancelRecommendationResponse {
 
 export interface ExperimentResultRequest {
   is_liquid_formed: boolean;
-  solubility?: number;
-  solubility_unit?: string;
-  temperature?: number;
+  temperature?: number; // deprecated; use conditions.temperature_C
+  conditions?: ExperimentConditions;
+  measurements?: DissolutionMeasurement[];
   properties?: Record<string, string>;
   notes?: string;
 }
@@ -170,6 +190,7 @@ export interface FeedbackData {
   experiment_result: ExperimentResult;
   processed_at: string;
   memory_extracted: boolean;
+  measurement_count?: number;
 }
 
 export interface FeedbackResponse {
@@ -192,11 +213,11 @@ export interface FeedbackStatusData {
   failed_at?: string;
   result?: {
     recommendation_id: string;
-    solubility?: number;
-    solubility_unit: string;
     is_liquid_formed?: boolean;
+    measurement_count?: number;
     memories_extracted: string[];
     num_memories: number;
+    experiment_summary_text?: string;
   };
   error?: string;
   is_update?: boolean;
@@ -218,24 +239,34 @@ export interface SummaryStatistics {
   pending_experiments: number;
   completed_experiments: number;
   cancelled: number;
-  average_performance_score: number;
   liquid_formation_rate: number;
+  max_leaching_efficiency_mean?: number;
+  max_leaching_efficiency_median?: number;
+  measurement_rows_mean?: number;
 }
 
 export interface PerformanceTrendPoint {
   date: string;
-  avg_solubility: number;
-  solubility_unit: string;
-  avg_performance_score: number;
+  max_leaching_efficiency_mean?: number;
+  max_leaching_efficiency_median?: number;
   experiment_count: number;
   liquid_formation_rate: number;
 }
 
 export interface TopFormulation {
   formulation: string;
-  avg_performance: number;
-  solubility_unit: string;
+  avg_max_leaching_efficiency?: number;
   success_count: number;
+}
+
+export interface TargetMaterialStats {
+  target_material: string;
+  experiments_total: number;
+  liquid_formation_rate: number;
+  max_leaching_efficiency_mean?: number;
+  max_leaching_efficiency_median?: number;
+  max_leaching_efficiency_p90?: number;
+  measurement_rows_mean?: number;
 }
 
 export interface StatisticsData {
@@ -244,6 +275,7 @@ export interface StatisticsData {
   by_status: Record<string, number>;
   performance_trend: PerformanceTrendPoint[];
   top_formulations: TopFormulation[];
+  target_material_stats: TargetMaterialStats[];
 }
 
 export interface StatisticsResponse {

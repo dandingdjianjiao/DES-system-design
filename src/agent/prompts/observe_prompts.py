@@ -107,7 +107,7 @@ Respond with ONLY a valid JSON object (no markdown, no explanation):
         "Most studies focus on 40-80°C range; only 2/10 papers report 25°C data"
     ],
     "information_gaps": [
-        "Lack low-temperature (25°C) solubility data for most formulations",
+        "Lack low-temperature (25°C) leaching-efficiency data for most formulations",
         "No viscosity measurements found in retrieved literature",
         "Missing comparative performance data between glycerol and urea at target temperature"
     ],
@@ -140,11 +140,29 @@ def format_action_result_for_observe(action: str, action_result: dict, knowledge
         memories = action_result.get("data", [])
         result_text += f"**Memories Retrieved**: {len(memories)}\n"
         if len(memories) > 0:
-            result_text += "**Sample Memories**:\n"
+            result_text += "**Sample Memories (experiment summaries if available)**:\n"
             for i, mem in enumerate(memories[:2], 1):
                 title = mem.title[:80] if hasattr(mem, 'title') else "Unknown"
-                solubility = mem.metadata.get('solubility', 'N/A') if hasattr(mem, 'metadata') else 'N/A'
-                result_text += f"  {i}. {title}... (solubility: {solubility})\n"
+                metadata = mem.metadata if hasattr(mem, 'metadata') else {}
+
+                summary = metadata.get("experiment_summary_text")
+                if not summary:
+                    # Fallback: derive a short leaching efficiency snippet
+                    measurements = metadata.get("measurements", []) or []
+                    max_eff = None
+                    unit = "%"
+                    for m in measurements:
+                        if m.get("leaching_efficiency") is not None:
+                            val = m.get("leaching_efficiency")
+                            max_eff = val if max_eff is None else max(max_eff, val)
+                            unit = m.get("unit", unit)
+                    if max_eff is not None:
+                        summary = f"Max leaching efficiency ≈ {max_eff} {unit}"
+                    else:
+                        summary = "No leaching data provided"
+
+                summary_short = summary if len(summary) <= 240 else summary[:240] + "..."
+                result_text += f"  {i}. {title} — {summary_short}\n"
 
     elif action == "query_theory":
         theory = action_result.get("data")

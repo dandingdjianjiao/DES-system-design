@@ -5,7 +5,8 @@ This module extracts generalizable reasoning strategies from agent trajectories,
 converting raw execution histories into structured memory items.
 """
 
-from typing import List, Callable, Literal
+from collections import defaultdict
+from typing import List, Callable, Literal, Dict, Any
 import logging
 
 from .memory import MemoryItem, Trajectory
@@ -19,6 +20,124 @@ from ..prompts import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _to_dict(obj: Any) -> Dict[str, Any]:
+    """Safely convert pydantic/dataclass/dict-ish objects to dict."""
+    if obj is None:
+        return {}
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    if isinstance(obj, dict):
+        return obj
+    try:
+        return dict(obj)  # type: ignore[arg-type]
+    except Exception:
+        return {}
+
+
+def format_experiment_for_llm(experiment_result) -> str:
+    """
+    Reformat raw experimental feedback into an LLM-friendly textual structure.
+
+    - Shows experimental conditions (temperature, solid–liquid mass ratio as g:g)
+    - Groups leaching efficiency measurements by target material and orders by time
+    - Includes optional properties and notes without pre-aggregating or summarizing
+    """
+    lines: List[str] = []
+
+    # Overview
+    status_text = "Yes (liquid formed)" if experiment_result.is_liquid_formed else "No (not formed)"
+    lines.append("**Experimental Result Overview**")
+    lines.append(f"- DES liquid phase formed: {status_text}")
+    lines.append("")
+
+    # Conditions
+    conditions = _to_dict(getattr(experiment_result, "conditions", {}))
+    solid_liquid_ratio = _to_dict(conditions.get("solid_liquid_ratio", {}))
+
+    temp_C = conditions.get("temperature_C")
+    solid_mass_g = solid_liquid_ratio.get("solid_mass_g")
+    # Treat liquid_volume_ml value as liquid mass in grams for presentation (per product decision)
+    liquid_mass_g = solid_liquid_ratio.get("liquid_volume_ml")
+    ratio_text = solid_liquid_ratio.get("ratio_text")
+
+    lines.append("**Experimental Conditions**")
+    if temp_C is not None:
+        lines.append(f"- Temperature: {temp_C} °C")
+
+    if solid_mass_g is not None or liquid_mass_g is not None or ratio_text:
+        if solid_mass_g is not None and liquid_mass_g is not None:
+            lines.append(f"- Solid–liquid mass ratio: {solid_mass_g} g : {liquid_mass_g} g")
+        elif ratio_text:
+            lines.append(f"- Solid–liquid mass ratio: {ratio_text}")
+        else:
+            if solid_mass_g is not None:
+                lines.append(f"- Solid mass: {solid_mass_g} g")
+            if liquid_mass_g is not None:
+                lines.append(f"- Liquid mass: {liquid_mass_g} g")
+
+        if ratio_text and (solid_mass_g is not None or liquid_mass_g is not None):
+            lines.append(f"  (Text ratio: {ratio_text})")
+    else:
+        lines.append("- (No explicit experimental conditions provided)")
+
+    lines.append("")
+
+    # Measurements grouped by target material
+    measurements = getattr(experiment_result, "measurements", []) or []
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for m in measurements:
+        target = m.get("target_material") or "Unknown"
+        grouped[target].append(m)
+
+    lines.append("**Leaching Measurements (time series by target)**")
+    if not grouped:
+        lines.append("- (No leaching measurements provided)")
+    else:
+        for target, rows in grouped.items():
+            rows_sorted = sorted(
+                rows,
+                key=lambda r: (
+                    r.get("time_h") is None,
+                    r.get("time_h") if r.get("time_h") is not None else 0.0,
+                ),
+            )
+            lines.append(f"- Target material: {target}")
+            for row in rows_sorted:
+                t = row.get("time_h")
+                eff = row.get("leaching_efficiency")
+                unit = row.get("unit") or "%"
+                obs = row.get("observation")
+
+                time_text = "time = N/A" if t is None else f"{t} h"
+                if eff is None:
+                    if obs:
+                        eff_text = f"N/A (note: {obs})"
+                    else:
+                        eff_text = "N/A"
+                else:
+                    eff_text = f"{eff} {unit}"
+
+                lines.append(f"  - {time_text}: {eff_text}")
+            lines.append("")  # blank line between targets
+
+    # Additional properties
+    properties = getattr(experiment_result, "properties", {}) or {}
+    if properties:
+        lines.append("**Additional Measured Properties**")
+        for k, v in properties.items():
+            lines.append(f"- {k}: {v}")
+        lines.append("")
+
+    # Notes
+    notes = getattr(experiment_result, "notes", "")
+    if notes:
+        lines.append("**Experimental Notes**")
+        lines.append(notes)
+        lines.append("")
+
+    return "\n".join(lines).strip()
 
 
 class MemoryExtractor:
@@ -272,7 +391,7 @@ class MemoryExtractor:
 
         Extraction Focus:
         - Formulation-condition-performance mappings
-        - Quantitative relationships (e.g., "ChCl:Urea 1:2 → 6.5 g/L solubility")
+        - Quantitative relationships (e.g., "ChCl:Urea 1:2 → 6.5 g/L leaching efficiency")
         - Component effects on performance
         - Molar ratio effects
         - Temperature effects on DES formation
@@ -311,10 +430,8 @@ class MemoryExtractor:
                     metadata={
                         "target_material": trajectory.metadata.get("target_material"),
                         "extraction_type": "experiment_feedback",
-                        # Store raw solubility instead of performance_score
-                        "solubility": experiment_result.solubility,
-                        "solubility_unit": experiment_result.solubility_unit,
                         "is_liquid_formed": experiment_result.is_liquid_formed,
+                        "measurements": experiment_result.measurements,
                     },
                 )
                 memories.append(memory)
@@ -323,15 +440,18 @@ class MemoryExtractor:
                 logger.warning(f"Failed to create memory item: {e}")
                 continue
 
-        # Log using raw solubility instead of performance_score
-        solubility_str = (
-            f"{experiment_result.solubility} {experiment_result.solubility_unit}"
-            if experiment_result.solubility is not None
-            else "N/A (DES not formed)"
-        )
+        # Log using summary of measurements
+        if experiment_result.measurements:
+            max_eff = max(
+                [m.get("leaching_efficiency") or 0 for m in experiment_result.measurements if m.get("leaching_efficiency") is not None],
+                default=0
+            )
+            solubility_str = f"max_leaching_efficiency={max_eff}%"
+        else:
+            solubility_str = "N/A (no measurements)"
         logger.info(
             f"Extracted {len(memories)} memories from experiment "
-            f"(solubility: {solubility_str})"
+            f"({solubility_str})"
         )
 
         return memories
@@ -361,25 +481,8 @@ class MemoryExtractor:
         metadata = trajectory.metadata
         final_result = trajectory.final_result
 
-        # Build experiment results summary (without performance_score)
-        solubility_display = (
-            f"{experiment_result.solubility} {experiment_result.solubility_unit}"
-            if experiment_result.solubility is not None
-            else "N/A (DES not formed)"
-        )
-        exp_summary = f"""**Experimental Results:**
-- DES Formation: {"✓ Yes (liquid formed)" if experiment_result.is_liquid_formed else "✗ No (remained solid/semi-solid)"}
-- Solubility: {solubility_display}
-"""
-
-        # Add optional properties
-        if experiment_result.properties:
-            exp_summary += "\n**Additional Properties:**\n"
-            for key, value in experiment_result.properties.items():
-                exp_summary += f"- {key}: {value}\n"
-
-        if experiment_result.notes:
-            exp_summary += f"\n**Experimental Notes:** {experiment_result.notes}\n"
+        # Build rich experiment summary for LLM (no aggregation, just formatting)
+        exp_summary = format_experiment_for_llm(experiment_result)
 
         # Build prompt using EXPERIMENT_EXTRACTION_PROMPT template
         prompt = EXPERIMENT_EXTRACTION_PROMPT.format(

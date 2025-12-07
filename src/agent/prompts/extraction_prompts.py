@@ -248,17 +248,20 @@ EXPERIMENT_EXTRACTION_PROMPT = """You are an expert in Deep Eutectic Solvent (DE
 Your goal is to extract generalizable insights about **formulation-condition-performance relationships** based on the experimental data.
 
 Focus on:
-1. **Quantitative relationships**: Which formulation achieved what solubility under what conditions?
-2. **Component effects**: How did HBD/HBA choice affect DES formation and solubility?
+1. **Quantitative relationships**: Which formulation achieved what **leaching performance** (leaching efficiency %) under what conditions and time?
+2. **Component effects**: How did HBD/HBA choice affect DES formation and leaching performance?
 3. **Molar ratio effects**: How did the ratio influence performance?
-4. **Temperature effects**: How did temperature affect DES formation?
+4. **Temperature effects**: How did temperature affect DES formation and leaching behaviour?
 5. **Failure analysis**: If DES didn't form, what might be the chemical reason?
 6. **Performance patterns**: What formulation characteristics correlate with better performance?
+7. **Time-series and multi-target behaviour**: Use the time-series leaching measurements to capture:
+   - How quickly each target material approaches high leaching efficiency
+   - Differences between multiple targets (e.g., cellulose vs lignin) under the same DES and conditions
 
 ## Important Notes
 
 - Extract **data-driven insights**, not just chemical theory
-- Include **quantitative values** (solubility, temperature, ratio) in memory content
+- Include **quantitative values** (e.g., maximum leaching efficiency %, time to reach plateau, temperature, solid–liquid ratio) in memory content
 - Focus on **transferable patterns** that can guide future formulations
 - You can extract at most 3 memory items
 - Do NOT repeat similar or overlapping items

@@ -12,6 +12,7 @@ import {
   Spin,
   Progress,
   List,
+  Table,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -372,14 +373,6 @@ function RecommendationDetailPage() {
               style={{ marginBottom: 16 }}
             />
             <Descriptions bordered column={2}>
-              {detail.experiment_result.solubility !== undefined && detail.experiment_result.solubility !== null && (
-                <Descriptions.Item label="溶解度" span={2}>
-                  <Text strong style={{ fontSize: '16px' }}>
-                    {detail.experiment_result.solubility}{' '}
-                    {detail.experiment_result.solubility_unit}
-                  </Text>
-                </Descriptions.Item>
-              )}
               {detail.experiment_result.experimenter && (
                 <Descriptions.Item label="实验人员">
                   {detail.experiment_result.experimenter}
@@ -408,6 +401,50 @@ function RecommendationDetailPage() {
                 )}
               </Descriptions.Item>
             </Descriptions>
+
+            {/* 自动格式化的实验摘要 */}
+            {detail.trajectory?.metadata?.experiment_summary_text && (
+              <Card
+                size="small"
+                style={{ marginTop: 16 }}
+                title="实验摘要（自动格式化，供模型/人工快速浏览）"
+              >
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
+                  {detail.trajectory.metadata.experiment_summary_text}
+                </pre>
+              </Card>
+            )}
+
+            {/* 原始长表测量数据 */}
+            {detail.experiment_result.measurements && detail.experiment_result.measurements.length > 0 && (
+              <Card
+                size="small"
+                style={{ marginTop: 16 }}
+                title="浸出效率原始记录（长表）"
+              >
+                <Table
+                  size="small"
+                  pagination={false}
+                  rowKey={(_, idx) => idx!.toString()}
+                  dataSource={detail.experiment_result.measurements}
+                  columns={[
+                    { title: '目标物质', dataIndex: 'target_material', key: 'target_material', width: 140 },
+                    { title: '时间 (h)', dataIndex: 'time_h', key: 'time_h', width: 100 },
+                    {
+                      title: '浸出效率',
+                      key: 'leaching_efficiency',
+                      render: (_: any, record: any) =>
+                        record.leaching_efficiency !== undefined && record.leaching_efficiency !== null
+                          ? `${record.leaching_efficiency} ${record.unit || '%'}`
+                          : 'N/A',
+                      width: 160,
+                    },
+                    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+                    { title: '观察/备注', dataIndex: 'observation', key: 'observation' },
+                  ]}
+                />
+              </Card>
+            )}
           </>
         )}
       </Card>

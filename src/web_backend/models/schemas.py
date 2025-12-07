@@ -184,22 +184,103 @@ class Trajectory(BaseModel):
     """Complete trajectory of recommendation generation"""
     steps: List[TrajectoryStep]
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional trajectory metadata (tool calls, experiment summaries, etc.)"
+    )
+
+
+class SolidLiquidRatio(BaseModel):
+    """Structured solid-liquid ratio information"""
+    solid_mass_g: Optional[float] = Field(
+        None,
+        ge=0.0,
+        description="Mass of solid used in grams",
+        json_schema_extra={"example": 1.0}
+    )
+    liquid_volume_ml: Optional[float] = Field(
+        None,
+        ge=0.0,
+        description="Volume of liquid used in milliliters",
+        json_schema_extra={"example": 10.0}
+    )
+    ratio_text: Optional[str] = Field(
+        None,
+        description="Optional textual ratio, e.g., '1:10 g:mL'",
+        json_schema_extra={"example": "1:10 g:mL"}
+    )
+
+
+class ExperimentConditions(BaseModel):
+    """Shared experimental conditions for a feedback submission"""
+    temperature_C: Optional[float] = Field(
+        None,
+        description="Experimental temperature in Celsius",
+        json_schema_extra={"example": 25.0}
+    )
+    solid_liquid_ratio: Optional[SolidLiquidRatio] = Field(
+        None,
+        description="Solid-liquid ratio details"
+    )
+
+
+class DissolutionMeasurement(BaseModel):
+    """Single measurement at a specific time point for one target material"""
+    target_material: str = Field(
+        ...,
+        min_length=1,
+        description="Name of the target material measured",
+        json_schema_extra={"example": "cellulose"}
+    )
+    time_h: float = Field(
+        ...,
+        ge=0.0,
+        description="Elapsed time in hours",
+        json_schema_extra={"example": 6.0}
+    )
+    leaching_efficiency: Optional[float] = Field(
+        None,
+        ge=0.0,
+        description="Measured leaching efficiency at this time point",
+        json_schema_extra={"example": 85.0}
+    )
+    unit: str = Field(
+        default="%",
+        description="Unit of leaching efficiency",
+        json_schema_extra={"example": "%"}
+    )
+    observation: Optional[str] = Field(
+        None,
+        description="Optional observation specific to this measurement",
+        json_schema_extra={"example": "Slight turbidity at 3h; clear after 6h"}
+    )
 
 
 class ExperimentResultData(BaseModel):
     """Experimental result data"""
     is_liquid_formed: bool = Field(..., description="Whether DES formed liquid phase")
-    solubility: Optional[float] = Field(None, description="Solubility of target material")
-    solubility_unit: str = Field(default="g/L", description="Unit of solubility")
     properties: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional properties (e.g., viscosity, density)",
         json_schema_extra={"example": {"viscosity": "45 cP", "appearance": "clear liquid"}}
     )
+    conditions: Optional[ExperimentConditions] = Field(
+        None,
+        description="Shared experimental conditions (temperature, solid-liquid ratio)"
+    )
+    measurements: List[DissolutionMeasurement] = Field(
+        default_factory=list,
+        description="Long-table dissolution measurements across solutes and time points"
+    )
     experimenter: Optional[str] = Field(None, description="Name of experimenter")
     experiment_date: str = Field(..., description="Experiment date (ISO format)")
     notes: str = Field(default="", description="Experimental notes")
-    performance_score: float = Field(..., ge=0.0, le=10.0, description="Performance score (0-10)")
+    performance_score: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=10.0,
+        description="Performance score (0-10); optional/derived"
+    )
 
 
 class MemoryItemSummary(BaseModel):
@@ -241,21 +322,23 @@ class ExperimentResultRequest(BaseModel):
         description="Whether the DES formed a liquid phase",
         json_schema_extra={"example": True}
     )
-    solubility: Optional[float] = Field(
-        None,
-        ge=0.0,
-        description="Solubility of target material (required if is_liquid_formed=True)",
-        json_schema_extra={"example": 6.5}
-    )
-    solubility_unit: str = Field(
-        default="g/L",
-        description="Unit of solubility measurement",
-        json_schema_extra={"example": "g/L"}
-    )
     properties: Optional[Dict[str, str]] = Field(
         default_factory=dict,
         description="Additional measured properties (key-value pairs)",
         json_schema_extra={"example": {"viscosity": "45 cP", "density": "1.15 g/mL"}}
+    )
+    conditions: Optional[ExperimentConditions] = Field(
+        None,
+        description="Shared experimental conditions (temperature, solid-liquid ratio)"
+    )
+    measurements: List[DissolutionMeasurement] = Field(
+        default_factory=list,
+        description="Long-table dissolution measurements across solutes and time points"
+    )
+    temperature: Optional[float] = Field(
+        None,
+        description="[DEPRECATED] Use conditions.temperature_C instead",
+        json_schema_extra={"example": 25.0}
     )
     experimenter: Optional[str] = Field(
         None,
@@ -268,14 +351,6 @@ class ExperimentResultRequest(BaseModel):
         description="Experimental notes and observations",
         json_schema_extra={"example": "DES formed successfully at room temperature. Clear liquid observed."}
     )
-
-    @field_validator('solubility')
-    @classmethod
-    def validate_solubility(cls, v: Optional[float], info) -> Optional[float]:
-        """Validate solubility based on is_liquid_formed"""
-        # Note: In Pydantic v2, we can't access other fields in validator directly
-        # This validation will be done in the service layer
-        return v
 
 
 class FeedbackRequest(BaseModel):
@@ -291,12 +366,14 @@ class FeedbackRequest(BaseModel):
 class FeedbackData(BaseModel):
     """Feedback processing result data"""
     recommendation_id: str
-    # Use raw solubility instead of performance_score
-    solubility: Optional[float] = Field(None, description="Measured solubility")
-    solubility_unit: str = Field(default="g/L", description="Unit of solubility")
     is_liquid_formed: Optional[bool] = Field(None, description="Whether DES liquid formed")
+    measurement_count: int = Field(..., description="Number of measurement rows processed")
     memories_extracted: List[str] = Field(..., description="Titles of extracted memories")
     num_memories: int = Field(..., description="Number of memories extracted")
+    experiment_summary_text: Optional[str] = Field(
+        None,
+        description="LLM-friendly formatted experiment summary (if available)"
+    )
     # Deprecated: kept for backward compatibility
     performance_score: Optional[float] = Field(None, ge=0.0, le=10.0, deprecated=True, description="[DEPRECATED] Use solubility instead")
 
@@ -340,16 +417,23 @@ class SummaryStatistics(BaseModel):
     pending_experiments: int
     completed_experiments: int
     cancelled: int
-    average_performance_score: float = Field(..., ge=0.0, le=10.0)
     liquid_formation_rate: float = Field(..., ge=0.0, le=1.0, description="Rate of successful liquid formation")
+    max_leaching_efficiency_mean: Optional[float] = Field(
+        None, ge=0.0, description="Mean of per-experiment maximum leaching efficiency (%)"
+    )
+    max_leaching_efficiency_median: Optional[float] = Field(
+        None, ge=0.0, description="Median of per-experiment maximum leaching efficiency (%)"
+    )
+    measurement_rows_mean: Optional[float] = Field(
+        None, ge=0.0, description="Average number of measurement rows per experiment"
+    )
 
 
 class PerformanceTrendPoint(BaseModel):
     """Single point in performance trend"""
     date: str = Field(..., description="Date (YYYY-MM-DD)")
-    avg_solubility: float = Field(..., ge=0.0)
-    solubility_unit: str = Field(default="g/L", description="Unit for solubility (common unit if mixed)")
-    avg_performance_score: float = Field(..., ge=0.0, le=10.0)
+    max_leaching_efficiency_mean: Optional[float] = Field(None, ge=0.0)
+    max_leaching_efficiency_median: Optional[float] = Field(None, ge=0.0)
     experiment_count: int = Field(..., ge=0)
     liquid_formation_rate: float = Field(..., ge=0.0, le=1.0)
 
@@ -357,9 +441,21 @@ class PerformanceTrendPoint(BaseModel):
 class TopFormulation(BaseModel):
     """Top performing formulation"""
     formulation: str = Field(..., description="Formulation string (e.g., 'ChCl:Urea (1:2)')")
-    avg_performance: float = Field(..., ge=0.0, le=10.0, description="Average solubility (note: field name kept for API compatibility)")
-    solubility_unit: str = Field(default="g/L", description="Unit for avg_performance (solubility)")
+    avg_max_leaching_efficiency: Optional[float] = Field(
+        None, ge=0.0, description="Average of per-experiment max leaching efficiency (%)"
+    )
     success_count: int = Field(..., ge=0)
+
+
+class TargetMaterialStats(BaseModel):
+    """Leaching efficiency statistics grouped by target material"""
+    target_material: str
+    experiments_total: int
+    liquid_formation_rate: float = Field(..., ge=0.0, le=1.0)
+    max_leaching_efficiency_mean: Optional[float] = Field(None, ge=0.0)
+    max_leaching_efficiency_median: Optional[float] = Field(None, ge=0.0)
+    max_leaching_efficiency_p90: Optional[float] = Field(None, ge=0.0)
+    measurement_rows_mean: Optional[float] = Field(None, ge=0.0)
 
 
 class StatisticsData(BaseModel):
@@ -369,6 +465,7 @@ class StatisticsData(BaseModel):
     by_status: Dict[str, int] = Field(..., description="Count by status")
     performance_trend: List[PerformanceTrendPoint]
     top_formulations: List[TopFormulation]
+    target_material_stats: List[TargetMaterialStats]
 
 
 class StatisticsResponse(BaseResponse):
