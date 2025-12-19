@@ -20,7 +20,7 @@ COPY src/tools/largerag/requirements.txt ./requirements/largerag_requirements.tx
 COPY src/web_backend/requirements.txt ./requirements/backend_requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
+RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple && pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     -r requirements/corerag_requirements.txt \
     -r requirements/largerag_requirements.txt \
