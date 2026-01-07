@@ -334,16 +334,16 @@ function RecommendationListPage() {
 
   return (
     <div>
-      <Title level={2}>推荐列表</Title>
+      <Title level={2}>RECOMMENDATION LIST</Title>
       <Paragraph>
-        查看所有DES配方推荐，可按状态和材料筛选。配方生成中的任务会自动刷新。
+        View all recommended DES formulas and filter by status and materials. The tasks in the recipe generation process will be automatically refreshed.
       </Paragraph>
 
       {/* Alert for GENERATING tasks */}
       {hasGeneratingTasks && (
         <Alert
-          message="配方生成中"
-          description="有配方正在后台生成，列表将每5秒自动刷新。请耐心等待..."
+          message="Generating formula"
+          description="The formula is being generated in the background. The list will automatically refresh every 5 seconds. Please wait patiently..."
           type="info"
           icon={<SyncOutlined spin />}
           showIcon
@@ -355,9 +355,9 @@ function RecommendationListPage() {
       {/* Filter Card */}
       <Card style={{ marginBottom: 16 }}>
         <Space size="middle" wrap>
-          <span>材料筛选:</span>
+          <span>Select Mateiral:</span>
           <Search
-            placeholder="输入材料名称"
+            placeholder="Type material name"
             allowClear
             style={{ width: 200 }}
             value={materialFilter}
@@ -382,7 +382,7 @@ function RecommendationListPage() {
               fetchRecommendations();
             }}
           >
-            重置
+            RESET
           </Button>
 
           <Button
@@ -391,12 +391,12 @@ function RecommendationListPage() {
             onClick={fetchRecommendations}
             loading={loading}
           >
-            手动刷新
+            REFRESH
           </Button>
 
           {hasGeneratingTasks && (
             <Tag color="blue" icon={<SyncOutlined spin />}>
-              自动刷新中
+              Auto-refreshing
             </Tag>
           )}
         </Space>
@@ -434,14 +434,14 @@ function RecommendationListPage() {
           locale={{
             emptyText:
               activeTab === 'generating'
-                ? '暂无生成中的任务'
+                ? 'No tasks are currently being generated'
                 : activeTab === 'pending'
-                ? '暂无待实验的推荐'
+                ? 'No formula await being experimented'
                 : activeTab === 'completed'
-                ? '暂无已完成的推荐'
+                ? 'No formula has been experimentally tested so far'
                 : activeTab === 'failed'
-                ? '暂无失败的任务'
-                : '暂无推荐数据',
+                ? 'No failed task has been recorded so far'
+                : 'No recommendation formula available currently',
           }}
         />
       </Card>

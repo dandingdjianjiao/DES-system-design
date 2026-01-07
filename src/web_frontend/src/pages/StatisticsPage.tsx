@@ -83,20 +83,20 @@ function StatisticsPage() {
 
   const trendColumns = [
     {
-      title: '日期',
+      title: 'Data',
       dataIndex: 'date',
       key: 'date',
       render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
-      title: '实验数量',
+      title: 'Experiment Count',
       dataIndex: 'experiment_count',
       key: 'experiment_count',
       sorter: (a: PerformanceTrendPoint, b: PerformanceTrendPoint) =>
         a.experiment_count - b.experiment_count,
     },
     {
-      title: '最大浸出效率均值 (%)',
+      title: 'Leaching Efficiency Average (%)',
       dataIndex: 'max_leaching_efficiency_mean',
       key: 'max_leaching_efficiency_mean',
       render: (val?: number) =>
@@ -105,7 +105,7 @@ function StatisticsPage() {
         (a.max_leaching_efficiency_mean || 0) - (b.max_leaching_efficiency_mean || 0),
     },
     {
-      title: '最大浸出效率中位数 (%)',
+      title: 'Leaching Efficiency Median (%)',
       dataIndex: 'max_leaching_efficiency_median',
       key: 'max_leaching_efficiency_median',
       render: (val?: number) =>
@@ -114,7 +114,7 @@ function StatisticsPage() {
         (a.max_leaching_efficiency_median || 0) - (b.max_leaching_efficiency_median || 0),
     },
     {
-      title: '液体形成率',
+      title: 'Liquid Formation Rate(%)',
       dataIndex: 'liquid_formation_rate',
       key: 'liquid_formation_rate',
       render: (val: number) => `${(val * 100).toFixed(1)}%`,
@@ -125,47 +125,47 @@ function StatisticsPage() {
 
   const topFormulationColumns = [
     {
-      title: '排名',
+      title: 'Rank',
       key: 'rank',
       render: (_: unknown, __: unknown, index: number) => (
         <Tag color={index < 3 ? 'gold' : 'default'}>{index + 1}</Tag>
       ),
     },
     {
-      title: '配方',
+      title: 'Formula',
       dataIndex: 'formulation',
       key: 'formulation',
       render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
     },
     {
-      title: '平均最大浸出效率 (%)',
+      title: 'Average Leaching Efficiency (%)',
       dataIndex: 'avg_max_leaching_efficiency',
       key: 'avg_max_leaching_efficiency',
       render: (val?: number) =>
         val !== undefined && val !== null ? <Tag color="blue">{val.toFixed(2)}%</Tag> : <Tag>--</Tag>,
     },
     {
-      title: '成功次数',
+      title: 'Success Count',
       dataIndex: 'success_count',
       key: 'success_count',
     },
   ];
 
   const targetMaterialColumns = [
-    { title: '目标物质', dataIndex: 'target_material', key: 'target_material' },
+    { title: 'Target Material', dataIndex: 'target_material', key: 'target_material' },
     { title: '实验数', dataIndex: 'experiments_total', key: 'experiments_total', sorter: (a: any, b: any) => a.experiments_total - b.experiments_total },
     { title: '形成率', dataIndex: 'liquid_formation_rate', key: 'liquid_formation_rate', render: (v: number) => `${(v * 100).toFixed(1)}%`, sorter: (a: any, b: any) => a.liquid_formation_rate - b.liquid_formation_rate },
-    { title: '最大浸出效率均值 (%)', dataIndex: 'max_leaching_efficiency_mean', key: 'max_leaching_efficiency_mean', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_mean || 0) - (b.max_leaching_efficiency_mean || 0) },
-    { title: '最大浸出效率中位数 (%)', dataIndex: 'max_leaching_efficiency_median', key: 'max_leaching_efficiency_median', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_median || 0) - (b.max_leaching_efficiency_median || 0) },
-    { title: '最大浸出效率 P90 (%)', dataIndex: 'max_leaching_efficiency_p90', key: 'max_leaching_efficiency_p90', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_p90 || 0) - (b.max_leaching_efficiency_p90 || 0) },
+    { title: 'Leaching Efficiency Average (%)', dataIndex: 'max_leaching_efficiency_mean', key: 'max_leaching_efficiency_mean', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_mean || 0) - (b.max_leaching_efficiency_mean || 0) },
+    { title: 'Leaching Efficiency Median (%)', dataIndex: 'max_leaching_efficiency_median', key: 'max_leaching_efficiency_median', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_median || 0) - (b.max_leaching_efficiency_median || 0) },
+    { title: 'Leaching Efficiency Max P90 (%)', dataIndex: 'max_leaching_efficiency_p90', key: 'max_leaching_efficiency_p90', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.max_leaching_efficiency_p90 || 0) - (b.max_leaching_efficiency_p90 || 0) },
     { title: '平均测量条数', dataIndex: 'measurement_rows_mean', key: 'measurement_rows_mean', render: (v?: number) => v != null ? v.toFixed(2) : '--', sorter: (a: any, b: any) => (a.measurement_rows_mean || 0) - (b.measurement_rows_mean || 0) },
   ];
 
   return (
     <div>
-      <Title level={2}>统计仪表板</Title>
+      <Title level={2}>STATISTICAL BOARD</Title>
       <Paragraph>
-        系统性能概览和趋势分析
+        System Performance Overview and Trend Analysis
       </Paragraph>
 
       {/* Summary Statistics */}
@@ -173,7 +173,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="总推荐数"
+              title="Total Recommendation"
               value={statistics.summary.total_recommendations}
               prefix={<ExperimentOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -183,7 +183,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="待实验"
+              title="To Be Tested"
               value={statistics.summary.pending_experiments}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#faad14' }}
@@ -193,7 +193,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="已完成"
+              title="Completed"
               value={statistics.summary.completed_experiments}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -203,7 +203,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="已取消"
+              title="Cancelled"
               value={statistics.summary.cancelled}
               prefix={<CloseCircleOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
@@ -216,7 +216,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12}>
           <Card>
             <Statistic
-              title="液体形成成功率"
+              title="Liquid Formation Success Rate"
               value={(statistics.summary.liquid_formation_rate * 100).toFixed(1)}
               suffix="%"
               valueStyle={{ color: '#52c41a' }}
@@ -226,7 +226,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12}>
           <Card>
             <Statistic
-              title="最大浸出效率均值"
+              title="Leaching Efficiency Average"
               value={
                 statistics.summary.max_leaching_efficiency_mean !== undefined &&
                 statistics.summary.max_leaching_efficiency_mean !== null
@@ -244,7 +244,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12}>
           <Card>
             <Statistic
-              title="最大浸出效率中位数"
+              title="Median Leaching Efficiency"
               value={
                 statistics.summary.max_leaching_efficiency_median !== undefined &&
                 statistics.summary.max_leaching_efficiency_median !== null
@@ -259,7 +259,7 @@ function StatisticsPage() {
         <Col xs={24} sm={12}>
           <Card>
             <Statistic
-              title="平均测量条数"
+              title="Measurement Strips Average"
               value={
                 statistics.summary.measurement_rows_mean !== undefined &&
                 statistics.summary.measurement_rows_mean !== null
@@ -274,7 +274,7 @@ function StatisticsPage() {
       {/* By Material and By Status */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
-          <Card title="按材料分布" bordered>
+          <Card title="By Material Distribution" bordered>
             {Object.entries(statistics.by_material)
               .sort(([, a], [, b]) => b - a)
               .map(([material, count]) => (
@@ -287,13 +287,13 @@ function StatisticsPage() {
                   }}
                 >
                   <Tag color="cyan">{material}</Tag>
-                  <Typography.Text strong>{count} 个推荐</Typography.Text>
+                  <Typography.Text strong>{count} Recommendation</Typography.Text>
                 </div>
               ))}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="按状态分布" bordered>
+          <Card title="By Status Distribution" bordered>
             {Object.entries(statistics.by_status).map(([status, count]) => {
               const colorMap: Record<string, string> = {
                 PENDING: 'orange',
@@ -301,9 +301,9 @@ function StatisticsPage() {
                 CANCELLED: 'red',
               };
               const labelMap: Record<string, string> = {
-                PENDING: '待实验',
-                COMPLETED: '已完成',
-                CANCELLED: '已取消',
+                PENDING: 'To be tested',
+                COMPLETED: 'Completed',
+                CANCELLED: 'Cancelled',
               };
               return (
                 <div
@@ -315,7 +315,7 @@ function StatisticsPage() {
                   }}
                 >
                   <Tag color={colorMap[status]}>{labelMap[status]}</Tag>
-                  <Typography.Text strong>{count} 个推荐</Typography.Text>
+                  <Typography.Text strong>{count} Recommendation</Typography.Text>
                 </div>
               );
             })}
@@ -325,7 +325,7 @@ function StatisticsPage() {
 
       {/* Target material stats */}
       <Card
-        title="按目标物质统计（浸出效率）"
+        title="By Target Material"
         style={{ marginBottom: 24 }}
       >
         <Table
@@ -338,7 +338,7 @@ function StatisticsPage() {
 
       {/* Performance Trend */}
       <Card
-        title="性能趋势"
+        title="Leaching Trend"
         extra={
           <Space>
             <RangePicker
@@ -375,7 +375,7 @@ function StatisticsPage() {
         title={
           <Space>
             <TrophyOutlined style={{ color: '#faad14' }} />
-            <span>最佳配方 Top 10</span>
+            <span>Optimial Formula Top 10</span>
           </Space>
         }
       >
