@@ -28,22 +28,22 @@ const menuItems: MenuItem[] = [
   {
     key: '/',
     icon: <HomeOutlined />,
-    label: <Link to="/">任务提交</Link>,
+    label: <Link to="/">TASK SUBMISSION</Link>,
   },
   {
     key: '/recommendations',
     icon: <UnorderedListOutlined />,
-    label: <Link to="/recommendations">推荐列表</Link>,
+    label: <Link to="/recommendations">RECOMMENDATION LIST</Link>,
   },
   {
     key: '/memories',
     icon: <DatabaseOutlined />,
-    label: <Link to="/memories">记忆库</Link>,
+    label: <Link to="/memories">RESONING BANK</Link>,
   },
   {
     key: '/statistics',
     icon: <BarChartOutlined />,
-    label: <Link to="/statistics">统计仪表板</Link>,
+    label: <Link to="/statistics">STATISTICAL BOARD</Link>,
   },
 ];
 

@@ -242,20 +242,20 @@ function TaskSubmissionPage() {
 
   return (
     <div>
-      <Title level={2}>任务提交</Title>
+      <Title level={2}>Task Submission</Title>
       <Paragraph>
-        提交您的DES配方需求，系统将在后台生成推荐配方。任务提交后不会阻塞页面，您可以继续操作。
+        Submit your DES formula requirements, and the system will generate recommended formulas in the background. After the task is submitted, the page will not be blocked, and you can continue to operate.
       </Paragraph>
 
       <Alert
-        message="提示"
-        description="任务提交后系统将在后台处理（可能需要几分钟），您可以前往推荐列表查看生成的推荐配方。"
+        message="Reminder"
+        description="After you submit the task, the system will process it in the background (which may take a few minutes). You can go to the recommendation list to view the generated recommended forlula."
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
       />
 
-      <Card title="配方需求" style={{ marginBottom: 24 }}>
+      <Card title="Formula Requirements" style={{ marginBottom: 24 }}>
         <Form
           form={form}
           layout="vertical"
@@ -268,13 +268,13 @@ function TaskSubmissionPage() {
         >
           {descriptionHistory.length > 0 && (
             <Form.Item
-              label="从历史任务描述中选择填充"
+              label="Select and fill in from the historical task description"
               style={{ marginBottom: 8 }}
             >
               <Select
                 allowClear
                 showSearch
-                placeholder="选择一条历史描述快速填入"
+                placeholder="Click here"
                 optionFilterProp="label"
                 style={{ width: '100%' }}
                 options={descriptionHistory.map((desc, index) => ({
@@ -291,16 +291,16 @@ function TaskSubmissionPage() {
           )}
 
           <Form.Item
-            label="任务描述"
+            label="Task Description"
             name="description"
             rules={[
-              { required: true, message: '请输入任务描述' },
-              { min: 10, message: '描述至少10个字符' },
+              { required: true, message: 'Please type the task description' },
+              { min: 10, message: 'At least 10 characters' },
             ]}
           >
             <TextArea
               rows={4}
-              placeholder="例如: 设计一种可以在-20°C下溶解纤维素的DES配方"
+              placeholder="Example: Design a DES formulation that can dissolve the cathode material at a temperature of 30℃"
               showCount
               maxLength={500}
             />
@@ -309,37 +309,37 @@ function TaskSubmissionPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="目标材料"
+                label="Target Material"
                 name="target_material"
-                rules={[{ required: true, message: '请输入目标材料' }]}
+                rules={[{ required: true, message: 'Type the target material' }]}
               >
                 <Input placeholder="例如: cellulose, lignin, chitin" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="目标温度 (°C)"
+                label="Target Temperature (°C)"
                 name="target_temperature"
-                rules={[{ required: true, message: '请输入目标温度' }]}
+                rules={[{ required: true, message: 'Type the target temperature' }]}
               >
                 <InputNumber
                   style={{ width: '100%' }}
                   min={-80}
                   max={150}
                   step={0.1}
-                  placeholder="例如: -20.0"
+                  placeholder="Example:25.0"
                 />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
-            label="组分数量"
+            label="The Number Of Component"
             name="num_components"
             tooltip="DES的组分数量：2=二元(Binary), 3=三元(Ternary), 4=四元(Quaternary), 5+=多元(Multi-component)"
             rules={[
-              { required: true, message: '请输入组分数量' },
-              { type: 'number', min: 2, max: 10, message: '组分数量范围: 2-10' },
+              { required: true, message: 'Type the number of component' },
+              { type: 'number', min: 2, max: 10, message: 'Range:2-10' },
             ]}
           >
             <InputNumber
@@ -347,19 +347,19 @@ function TaskSubmissionPage() {
               min={2}
               max={10}
               step={1}
-              placeholder="输入组分数量 (2-10)"
+              placeholder="Type the number of component (2-10))"
             />
           </Form.Item>
 
           {constraintsHistory.length > 0 && (
             <Form.Item
-              label="从历史约束条件中选择填充"
+              label="Select from the historical constraints"
               style={{ marginBottom: 8 }}
             >
               <Select
                 allowClear
                 showSearch
-                placeholder="选择一条历史约束快速填入"
+                placeholder="Click here"
                 optionFilterProp="label"
                 style={{ width: '100%' }}
                 options={constraintsHistory.map((text, index) => ({
@@ -374,10 +374,10 @@ function TaskSubmissionPage() {
             </Form.Item>
           )}
 
-          <Form.Item label="约束条件 (可选)" name="constraints">
+          <Form.Item label="Constraints (optional)" name="constraints">
             <TextArea
               rows={3}
-              placeholder="例如: 无毒性, 成本低于10元/kg"
+              placeholder="Example:nontoxic, cost lower than 10 dollars per kilogram"
             />
           </Form.Item>
 
@@ -388,24 +388,23 @@ function TaskSubmissionPage() {
               checked={batchMode}
               onChange={(e) => setBatchMode(e.target.checked)}
             >
-              批量提交模式
+              Batch Submission
             </Checkbox>
           </Form.Item>
 
           {batchMode && (
             <Form.Item
-              label="提交数量"
+              label="Number of submissions"
               name="batch_count"
               rules={[
-                { required: true, message: '请输入提交数量' },
-                { type: 'number', min: 1, max: 10, message: '数量范围: 1-10' },
+                { required: true, message: 'Type the number' },
+                { type: 'number', min: 1, max: 10, message: 'Range: 1-10' },
               ]}
             >
               <InputNumber
                 style={{ width: '100%' }}
                 min={1}
                 max={10}
-                placeholder="输入要提交的任务数量 (1-10)"
               />
             </Form.Item>
           )}
@@ -418,7 +417,7 @@ function TaskSubmissionPage() {
                 icon={<SendOutlined />}
                 size="large"
               >
-                {batchMode ? '批量提交任务' : '提交任务'}
+                {batchMode ? 'Submit Batch Tasks' : '提交任务'}
               </Button>
               <Button
                 icon={<ReloadOutlined />}

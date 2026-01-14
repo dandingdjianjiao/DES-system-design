@@ -227,14 +227,14 @@ function MemoriesPage() {
 
   return (
     <div>
-      <Title level={2}>记忆库管理</Title>
+      <Title level={2}>REASOING BANK</Title>
       <Paragraph>
-        管理Agent的推理记忆。记忆来源于实验反馈的自动提取，也可手动创建和编辑。
+        Manage the reasoning memory of the Agent. The memory is automatically extracted from experimental feedback, and can also be manually created and edited.
       </Paragraph>
 
       <Alert
-        message="关于记忆库"
-        description="记忆库存储从成功/失败实验中提取的推理策略。Agent在生成新推荐时会检索相关记忆来指导决策。"
+        message="About Reasoning Bank"
+        description="The Reasoning Bank stores the reasoning strategies extracted from successful/failure experiments. The agent retrieves relevant memories when generating new recommendations to guide its decision-making."
         type="info"
         showIcon
         closable
@@ -244,9 +244,9 @@ function MemoriesPage() {
       {/* Filter Card */}
       <Card style={{ marginBottom: 16 }}>
         <Space size="middle" wrap>
-          <span>来源筛选:</span>
+          <span>Select Source:</span>
           <Select
-            placeholder="全部"
+            placeholder="All"
             allowClear
             style={{ width: 120 }}
             value={isFromSuccessFilter}
@@ -255,15 +255,15 @@ function MemoriesPage() {
               setCurrentPage(1);
             }}
             options={[
-              { label: '全部', value: undefined },
-              { label: '成功实验', value: true },
-              { label: '失败实验', value: false },
+              { label: 'All', value: undefined },
+              { label: 'Successful experiment', value: true },
+              { label: 'Failure experiment', value: false },
             ]}
           />
 
-          <span>任务ID:</span>
+          <span>Task ID:</span>
           <Search
-            placeholder="输入任务/推荐ID"
+            placeholder="Type task / recommended ID"
             allowClear
             style={{ width: 250 }}
             value={sourceTaskIdFilter}
@@ -289,7 +289,7 @@ function MemoriesPage() {
               fetchMemories();
             }}
           >
-            重置
+            RESET
           </Button>
 
           <Button
@@ -298,7 +298,7 @@ function MemoriesPage() {
             onClick={fetchMemories}
             loading={loading}
           >
-            刷新
+            REFRSH
           </Button>
 
           <Button
@@ -309,7 +309,7 @@ function MemoriesPage() {
               setCreateModalVisible(true);
             }}
           >
-            新建记忆
+            CREATE NEW MEMORY
           </Button>
         </Space>
       </Card>
