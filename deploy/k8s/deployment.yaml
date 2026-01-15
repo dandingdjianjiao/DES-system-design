@@ -253,7 +253,7 @@ spec:
       containers:
         - name: backend
           image: harbor.pic-aichem.online/sunyk/des-system-design-backend:v0.1
-          imagePullPolicy: Pull
+          imagePullPolicy: Always
           imagePullSecrets: 
             - name: harbor-auth
           ports:
@@ -317,7 +317,7 @@ spec:
 
         - name: frontend
           image: harbor.pic-aichem.online/sunyk/des-system-design-backend:v0.1
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           imagePullSecrets: 
             - name: harbor-auth
           ports:
