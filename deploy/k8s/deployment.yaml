@@ -252,8 +252,10 @@ spec:
               mountPath: /app/src/tools/largerag/data
       containers:
         - name: backend
-          image: your-registry/des-backend:latest
-          imagePullPolicy: IfNotPresent
+          image: harbor.pic-aichem.online/sunyk/des-system-design-backend:v0.1
+          imagePullPolicy: Pull
+          imagePullSecrets: 
+            - name: harbor-auth
           ports:
             - name: http-backend
               containerPort: 8000
@@ -314,8 +316,10 @@ spec:
             failureThreshold: 3
 
         - name: frontend
-          image: your-registry/des-frontend:latest
+          image: harbor.pic-aichem.online/sunyk/des-system-design-backend:v0.1
           imagePullPolicy: IfNotPresent
+          imagePullSecrets: 
+            - name: harbor-auth
           ports:
             - name: http-frontend
               containerPort: 80
