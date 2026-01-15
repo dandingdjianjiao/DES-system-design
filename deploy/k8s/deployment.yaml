@@ -316,7 +316,7 @@ spec:
             failureThreshold: 3
 
         - name: frontend
-          image: harbor.pic-aichem.online/sunyk/des-system-design-backend:v0.1
+          image: harbor.pic-aichem.online/sunyk/des-system-design-frontend:v0.1
           imagePullPolicy: Always
           imagePullSecrets: 
             - name: harbor-auth
@@ -330,7 +330,7 @@ spec:
                 secretKeyRef:
                   name: des-secrets
                   key: DASHSCOPE_API_KEY
-                  
+
           volumeMounts:
             - name: des-nginx-config
               mountPath: /etc/nginx/conf.d/default.conf
